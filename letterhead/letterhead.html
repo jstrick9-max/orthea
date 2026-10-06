@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lemchen Salzer Letterhead</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=block" rel="stylesheet">
+<style>
+  @page { size: letter; margin: 0; }
+  :root {
+    --ink: #3d3836;      /* warm charcoal, matched to the original logo */
+    --muted: #8b8481;
+    --rule: #d9d4d1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: "Jost", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; }
+
+  .page {
+    width: 8.5in; height: 11in; position: relative;
+    padding: 0.7in 0.85in 0.6in;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---------- Header ---------- */
+  header { display: flex; justify-content: space-between; align-items: flex-end; }
+
+  .lockup { display: flex; align-items: center; gap: 15pt; }
+  .mark { display: grid; grid-template-columns: 7.5pt 7.5pt; gap: 2.4pt; }
+  .mark i { width: 7.5pt; height: 7.5pt; border-radius: 1.3pt; background: var(--ink); display: block; }
+  .wordmark { line-height: 1; }
+  .wordmark .name {
+    font-weight: 400; font-size: 17pt; letter-spacing: 0.22em; margin-right: -0.22em;
+  }
+  .wordmark .name span { color: var(--muted); font-weight: 300; padding: 0 0.12em; }
+  .wordmark .sub {
+    margin-top: 6pt; font-weight: 400; font-size: 6.6pt; letter-spacing: 0.62em; color: var(--muted);
+  }
+
+  .doctors { text-align: right; font-size: 7pt; line-height: 1.6; letter-spacing: 0.06em; }
+  .doctors .dr { font-weight: 500; text-transform: uppercase; letter-spacing: 0.14em; font-size: 6.6pt; }
+  .doctors .cred { color: var(--muted); font-weight: 400; }
+  .doctors .note { color: var(--muted); font-style: normal; font-size: 6.4pt; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3pt; }
+  .doctors .group + .group { margin-top: 7pt; }
+
+  .rule { height: 0; border-top: 0.6pt solid var(--rule); margin-top: 20pt; }
+
+  /* ---------- Body ---------- */
+  main { flex: 1; padding-top: 0.55in; font-size: 10.5pt; line-height: 1.6; font-weight: 400; }
+  main p + p { margin-top: 10pt; }
+  main .date, main .addr { color: var(--ink); }
+  main .addr { margin: 18pt 0 22pt; }
+  main .sig { margin-top: 26pt; }
+  .sample main { color: var(--ink); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 0.6pt solid var(--rule); padding-top: 12pt;
+    display: flex; justify-content: center; align-items: center; gap: 12pt;
+    font-size: 6.8pt; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted);
+  }
+  footer .dot { width: 2.5pt; height: 2.5pt; border-radius: 50%; background: var(--rule); }
+  footer b { font-weight: 500; color: var(--ink); letter-spacing: 0.24em; }
+</style>
+</head>
+<body class="">
+<div class="page">
+  <header>
+    <div class="lockup">
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="wordmark">
+        <div class="name">LEMCHEN<span>·</span>SALZER</div>
+        <div class="sub">ORTHODONTICS</div>
+      </div>
+    </div>
+    <div class="doctors">
+      <div class="group">
+        <div><span class="dr">Marc S. Lemchen</span> <span class="cred">DMD</span></div>
+        <div><span class="dr">Jennifer Salzer</span> <span class="cred">DDS</span></div>
+        <div><span class="dr">Andrew T. Lemchen</span> <span class="cred">DMD</span></div>
+        <div class="note">Diplomates, American Board of Orthodontics</div>
+      </div>
+      <div class="group">
+        <div><span class="dr">Bina Park</span> <span class="cred">DDS</span></div>
+      </div>
+    </div>
+  </header>
+  <div class="rule"></div>
+
+  <main></main>
+
+  <footer>
+    <span>553 Park Avenue</span><span class="dot"></span>
+    <span>New York, NY 10065</span><span class="dot"></span>
+    <span>Tel <b>212.755.2333</b></span>
+  </footer>
+</div>
+</body>
+</html>
