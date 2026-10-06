@@ -4,31 +4,7 @@ On-screen styling only. The Doctor and Family letters show the LSO letterhead (l
 doctor list, rule) above the text and the address footer below it. The TMT summary is
 an internal chart note and shows neither. Mirrors `letterhead/letterhead.html`.
 
-Logo: `https://orthea-audio.s3.us-east-2.amazonaws.com/resources/lso/LSO-Letterhead-Logo.jpg`
-(must be publicly readable — see step 0).
-
-## 0. Make the logo readable
-
-Test the URL in a private browser window. If it shows `AccessDenied` XML, allow public
-read on `resources/lso/*` only (bucket policy below; also untick "Block all public
-access" for bucket policies on `orthea-audio`). Do not open the whole bucket — it holds
-Voice audio.
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "PublicReadLetterheadAssets",
-    "Effect": "Allow",
-    "Principal": "*",
-    "Action": "s3:GetObject",
-    "Resource": "arn:aws:s3:::orthea-audio/resources/lso/*"
-  }]
-}
-```
-
-If the bucket already has a policy, add this statement to its `Statement` array rather
-than replacing it.
+Logo: `https://orthea-assets.s3.us-east-2.amazonaws.com/LSO-Letterhead-Logo.jpg`
 
 ## 1. Letterhead Top (Embed)
 
@@ -37,7 +13,7 @@ Name it `Letterhead Top`. Embed:
 
 ```html
 <div class="lso-head">
-  <img class="lso-logo" src="https://orthea-audio.s3.us-east-2.amazonaws.com/resources/lso/LSO-Letterhead-Logo.jpg" alt="Lemchen Salzer Orthodontics">
+  <img class="lso-logo" src="https://orthea-assets.s3.us-east-2.amazonaws.com/LSO-Letterhead-Logo.jpg" alt="Lemchen Salzer Orthodontics">
   <div class="lso-doctors">
     <div class="lso-group">
       <div><span class="lso-dr">Marc S. Lemchen</span> <span class="lso-cred">DMD</span></div>
