@@ -24,18 +24,6 @@
   /* ---------- Header ---------- */
   header { display: flex; justify-content: space-between; align-items: flex-end; }
 
-  .lockup { display: flex; align-items: center; gap: 15pt; }
-  .mark { display: grid; grid-template-columns: 7.5pt 7.5pt; gap: 2.4pt; }
-  .mark i { width: 7.5pt; height: 7.5pt; border-radius: 1.3pt; background: var(--ink); display: block; }
-  .wordmark { line-height: 1; }
-  .wordmark .name {
-    font-weight: 400; font-size: 17pt; letter-spacing: 0.22em; margin-right: -0.22em;
-  }
-  .wordmark .name span { color: var(--muted); font-weight: 300; padding: 0 0.12em; }
-  .wordmark .sub {
-    margin-top: 6pt; font-weight: 400; font-size: 6.6pt; letter-spacing: 0.62em; color: var(--muted);
-  }
-
   .doctors { text-align: right; font-size: 7pt; line-height: 1.6; letter-spacing: 0.06em; }
   .doctors .dr { font-weight: 500; text-transform: uppercase; letter-spacing: 0.14em; font-size: 6.6pt; }
   .doctors .cred { color: var(--muted); font-weight: 400; }
@@ -43,6 +31,8 @@
   .doctors .group + .group { margin-top: 7pt; }
 
   .rule { height: 0; border-top: 0.6pt solid var(--rule); margin-top: 20pt; }
+
+  .logo { width: 1.75in; height: auto; display: block; }
 
   /* ---------- Body ---------- */
   main { flex: 1; padding-top: 0.55in; font-size: 10.5pt; line-height: 1.6; font-weight: 400; }
@@ -65,13 +55,7 @@
 <body class="">
 <div class="page">
   <header>
-    <div class="lockup">
-      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <div class="wordmark">
-        <div class="name">LEMCHEN<span>·</span>SALZER</div>
-        <div class="sub">ORTHODONTICS</div>
-      </div>
-    </div>
+    <img class="logo" src="logo.png" alt="Lemchen Salzer Orthodontics">
     <div class="doctors">
       <div class="group">
         <div><span class="dr">Marc S. Lemchen</span> <span class="cred">DMD</span></div>
