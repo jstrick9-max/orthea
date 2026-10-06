@@ -1,0 +1,51 @@
+<style>
+/* ===== Generating panel (shown while status = generating) ===== */
+@keyframes cg-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+@keyframes cg-pulse { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+@keyframes cg-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.cg-wrap {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 56px 24px 48px; font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+}
+.cg-sheet {
+  width: 168px; padding: 20px 18px 22px; background: #FFFFFF;
+  border: 1px solid #EBE3D9; border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(31, 29, 27, 0.08);
+  animation: cg-float 3s ease-in-out infinite;
+}
+.cg-line {
+  height: 7px; border-radius: 4px; margin-top: 9px;
+  background: linear-gradient(90deg, #EFE9E2 0%, #DCE7E4 40%, #EFE9E2 80%);
+  background-size: 800px 100%; animation: cg-shimmer 1.8s linear infinite;
+}
+.cg-line:first-child { margin-top: 0; width: 45%; }
+.cg-line.w90 { width: 90%; } .cg-line.w75 { width: 75%; } .cg-line.w60 { width: 60%; }
+.cg-line.gap { margin-top: 16px; }
+.cg-title {
+  margin-top: 28px; font-family: 'Fraunces', Georgia, serif;
+  font-size: 22px; color: #1F1D1B; letter-spacing: -0.01em;
+}
+.cg-dots { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: middle; }
+.cg-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: #C87D56;
+  animation: cg-pulse 1.4s ease-in-out infinite;
+}
+.cg-dots span:nth-child(2) { animation-delay: .2s; }
+.cg-dots span:nth-child(3) { animation-delay: .4s; }
+.cg-sub { margin-top: 10px; max-width: 420px; font-size: 14px; line-height: 1.6; color: #7A716A; }
+@media (prefers-reduced-motion: reduce) {
+  .cg-sheet, .cg-line, .cg-dots span { animation: none; }
+}
+</style>
+<div class="cg-wrap">
+  <div class="cg-sheet" aria-hidden="true">
+    <div class="cg-line"></div>
+    <div class="cg-line w90 gap"></div>
+    <div class="cg-line"></div>
+    <div class="cg-line w75"></div>
+    <div class="cg-line w90 gap"></div>
+    <div class="cg-line w60"></div>
+  </div>
+  <div class="cg-title">Writing your letters<span class="cg-dots"><span></span><span></span><span></span></span></div>
+  <div class="cg-sub">Checking your notes against the transcript, then drafting the doctor letter, family letter and TMT summary. This usually takes about a minute. The letters will appear here on their own.</div>
+</div>
