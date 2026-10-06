@@ -88,9 +88,13 @@ For **C · Consult review**, click **Run** before saving, so Budibase picks up t
    and click **Documents Card Footer**.
 2. **+ Add component → Container**. Rename it **Download Buttons**.
 3. Drag it so it sits directly below **Approval Note**, above **Edit Buttons**.
-4. **Configure conditions → Add condition**:
-   **Show component** · if `approve_state` (binding picker: **Consult Review → rows → 0 →
-   approve_state**) · **Equals** · `done` → **Save**.
+4. **Configure conditions → Add condition**: **Show component** · **Equals** · `done`.
+   For the value, paste this into the box (leave it on **Text**). The binding picker
+   stops at *Rows* and can't reach the fields inside a row:
+   ```
+   {{ [cf63413f4229447ef864d862c5627ee22].[rows].0.approve_state }}
+   ```
+   Then **Save**. This is the same binding the Approve Letters button's condition uses.
 
 ### 4b. The four buttons
 
@@ -99,10 +103,10 @@ four times). Set each one up as in the table, then follow the click steps below 
 
 | Name | Text | Link ends with | Condition |
 |---|---|---|---|
-| **Download Doctor PDF** | `Download PDF` | `/doctor/pdf?by=…` | **Hide** if `{{ State.reviewOther }}` Equals `yes` |
-| **Download Doctor Word** | `Download Word` | `/doctor/docx?by=…` | **Hide** if `{{ State.reviewOther }}` Equals `yes` |
-| **Download Family PDF** | `Download PDF` | `/family/pdf?by=…` | **Show** if `{{ State.reviewTab }}` Equals `family` |
-| **Download Family Word** | `Download Word` | `/family/docx?by=…` | **Show** if `{{ State.reviewTab }}` Equals `family` |
+| **Download Doctor PDF** | `Download PDF` | `/doctor/pdf?by=…` | **Hide** if `{{ [state].[reviewOther] }}` Equals `yes` |
+| **Download Doctor Word** | `Download Word` | `/doctor/docx?by=…` | **Hide** if `{{ [state].[reviewOther] }}` Equals `yes` |
+| **Download Family PDF** | `Download PDF` | `/family/pdf?by=…` | **Show** if `{{ [state].[reviewTab] }}` Equals `family` |
+| **Download Family Word** | `Download Word` | `/family/docx?by=…` | **Show** if `{{ [state].[reviewTab] }}` Equals `family` |
 
 These are the same conditions your Edit Doctor and Edit Family buttons use. On the TMT
 summary tab, none of the four shows.
@@ -127,9 +131,8 @@ For each button:
    ```
    https://listen.ortheasecurity.com/webhook/7c3f9a52-4e1d-4b8a-9f6e-2d5c8b1a0e47/consult/letter/{{ [cf63413f4229447ef864d862c5627ee22].[rows].0.download_token }}/family/docx?by={{ [user].[email] }}
    ```
-   Budibase will show the bindings as readable names (Consult Review…, Current User…).
-   If you'd rather build them with the ⚡ picker, use **Consult Review → rows → 0 →
-   download_token** and **Current User → email**.
+   Paste the whole link as text. The binding picker can't reach `download_token`
+   inside a row.
 3. **Configure conditions** → add the condition from the table → **Save**.
 
 ### 4c. Styling
