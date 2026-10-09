@@ -33,7 +33,8 @@ const LOAD_SQL = `SELECT c.id                                  AS consult_id,
        COALESCE(o.final_text, o.draft_text)  AS letter_text,
        to_char(c.approved_at AT TIME ZONE 'America/New_York', 'FMMonth FMDD, YYYY') AS letter_date,
        p.first_name,
-       p.last_name
+       p.last_name,
+       c.composite_image
 FROM consult.consults c
 JOIN consult.patients p ON p.id = c.patient_id
 JOIN consult.outputs  o ON o.consult_id = c.id
@@ -213,8 +214,17 @@ export function buildWorkflow() {
   };
 }
 
+// The deployed workflow (live/C02_export.json, exported from n8n) is the template:
+// only the Build file code is replaced, so every other node setting stays as deployed.
+export function buildFromLive() {
+  const live = JSON.parse(read('live/C02_export.json').toString());
+  const node = live.nodes.find(n => n.name === 'Build file');
+  node.parameters.jsCode = codeNodeSource();
+  return live;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = path.join(root, 'C02_Consult_-_Download_Letter.json');
-  writeFileSync(out, JSON.stringify(buildWorkflow(), null, 2) + '\n');
+  writeFileSync(out, JSON.stringify(buildFromLive(), null, 2) + '\n');
   console.log('wrote', out);
 }

@@ -5,29 +5,75 @@
 // guaranteed. No require(), no zlib: the .docx is a stored (uncompressed) zip and
 // the PDF passes the PNG letterhead data through untouched.
 //
-// Layout follows letterhead/letterhead.html: US Letter, 0.85in side margins,
-// letterhead header on page 1, address footer on every page, 10.5pt body text
-// with 1.6 line height and 10pt between paragraphs.
+// Layout follows LSO's own Dolphin consultation letters: US Letter, 0.85in side
+// margins, letterhead header on page 1, address footer on every page, Times 11.5pt
+// body, underlined section headings, bullet and numbered lists with a hanging indent,
+// and the mailing address and sign-off set as tight single-spaced blocks.
 
-// ---------------------------------------------------------------- letter text
+// ---------------------------------------------------------------- letter structure
 
-// Mirrors the formatting in the Budibase query "C · Consult review": every line is
-// its own paragraph, except that a "Thanks," / "Best," line keeps the line after it
-// in the same paragraph (so the sign-off stays together).
-function letterParagraphs(text) {
+// Section headings used by the letter templates. A short Title Case line with no
+// end punctuation is also treated as a heading, so practice-edited templates work.
+const HEADINGS = new Set([
+  'dental relationships', 'skeletal and facial relationships', 'radiographic findings',
+  'treatment plan', 'long-term considerations', 'special considerations', 'fees',
+]);
+const SMALL_WORDS = new Set(['and', 'of', 'the', 'to', 'for', 'a', 'an', 'in', 'on', 'or', 'with']);
+const GREETING_RE = /^(Hi|Dear|Hello)\s.+,$/;
+const SIGNOFF_RE = /^(Thanks|Thank you|Best|Sincerely|Regards|Warm regards|Kind regards),$/i;
+const BULLET_RE = /^[•●*-]\s+/;
+const NUMBER_RE = /^(\d+)[.)]\s+/;
+
+function isHeading(line) {
+  if (HEADINGS.has(line.toLowerCase())) return true;
+  if (/[.,:;!?]$/.test(line) || line.length > 45) return false;
+  const words = line.split(/\s+/);
+  return words.length <= 5 && words.every(w => SMALL_WORDS.has(w) || /^[A-Z][A-Za-z'-]*$/.test(w));
+}
+
+// Turns the letter text into blocks:
+//   { kind: 'tight',   lines: [...] }      address / sign-off, single-spaced
+//   { kind: 'para',    text, keepNext }    ordinary paragraph (keepNext when it ends in ':')
+//   { kind: 'heading', text }
+//   { kind: 'list',    items: [{ marker, text }] }
+// Blank lines are ignored, so letters edited on the review screen (where every line
+// is shown as its own paragraph) come out the same.
+function letterBlocks(text) {
   const lines = String(text == null ? '' : text)
     .replace(/\\n/g, '\n')
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map(l => l.trim())
     .filter(l => l !== '');
-  const paras = [];
-  for (const line of lines) {
-    const cur = paras[paras.length - 1];
-    if (cur && /(Thanks,|Best,)$/.test(cur[cur.length - 1])) cur.push(line);
-    else paras.push([line]);
+
+  const greeting = lines.findIndex(l => GREETING_RE.test(l));
+  let signoff = -1;
+  for (let i = Math.max(greeting + 1, lines.length - 6); i < lines.length; i++) {
+    if (SIGNOFF_RE.test(lines[i])) { signoff = i; break; }
   }
-  return paras;
+
+  const blocks = [];
+  let start = 0;
+  if (greeting > 0) { blocks.push({ kind: 'tight', lines: lines.slice(0, greeting) }); start = greeting; }
+  const end = signoff >= 0 ? signoff : lines.length;
+
+  for (let i = start; i < end; i++) {
+    const line = lines[i];
+    const prev = blocks[blocks.length - 1];
+    const b = line.match(BULLET_RE);
+    const n = line.match(NUMBER_RE);
+    if (b || n) {
+      const item = { marker: b ? '•' : n[1] + '.', text: line.slice((b || n)[0].length) };
+      if (prev && prev.kind === 'list') prev.items.push(item);
+      else blocks.push({ kind: 'list', items: [item] });
+    } else if (i !== greeting && isHeading(line)) {
+      blocks.push({ kind: 'heading', text: line });
+    } else {
+      blocks.push({ kind: 'para', text: line, keepNext: /:$/.test(line) });
+    }
+  }
+  if (signoff >= 0) blocks.push({ kind: 'tight', lines: lines.slice(signoff), keepTogether: true });
+  return blocks;
 }
 
 // ---------------------------------------------------------------- binary helpers
@@ -126,14 +172,139 @@ function parsePng(buf) {
   return { width, height, data: Buffer.concat(idat), png: buf };
 }
 
+
+// ---------------------------------------------------------------- composite photo
+
+// Reads the composite photo stored in consults.composite_image (base64, JPEG or PNG).
+// Returns { format, width, height, bytes } or null if it isn't a usable image.
+function loadImage(base64) {
+  if (!base64) return null;
+  const buf = Buffer.from(String(base64).replace(/^data:[^,]*,/, ''), 'base64');
+  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    // JPEG: size and colour channels come from the first SOF marker.
+    let pos = 2;
+    while (pos + 9 < buf.length) {
+      if (buf[pos] !== 0xff) { pos++; continue; }
+      const marker = buf[pos + 1];
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { pos += 2; continue; }
+      const len = buf.readUInt16BE(pos + 2);
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { format: 'jpeg', height: buf.readUInt16BE(pos + 5), width: buf.readUInt16BE(pos + 7),
+                 components: buf[pos + 9], bytes: buf };
+      }
+      pos += 2 + len;
+    }
+    return null;
+  }
+  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47) {
+    return { format: 'png', width: buf.readUInt32BE(16), height: buf.readUInt32BE(20),
+             bitDepth: buf[24], colorType: buf[25], interlace: buf[28], bytes: buf };
+  }
+  return null;
+}
+
+// Family letters: the photo goes straight after the first paragraph below the greeting.
+function withComposite(blocks, image) {
+  if (!image) return blocks;
+  const greeting = blocks.findIndex(b => b.kind === 'para' && GREETING_RE.test(b.text));
+  let at = blocks.findIndex((b, i) => i > greeting && b.kind === 'para');
+  if (at < 0) at = greeting;
+  const out = blocks.slice();
+  out.splice(at + 1, 0, { kind: 'image', image });
+  return out;
+}
+
+// Largest size that fits the text column and the height cap, keeping proportions.
+const PHOTO_MAX_H = 3.6 * 72;                       // photo height cap (3.6in)
+function photoSize(img, maxW) {
+  const s = Math.min(maxW / img.width, PHOTO_MAX_H / img.height);
+  return { w: img.width * s, h: img.height * s };
+}
+
+// PDF image object for the photo, or null if this PNG variant can't be embedded.
+// JPEGs pass through untouched. 8-bit RGB / grey PNGs pass through with a predictor.
+// Other PNGs (alpha, palette, 1–16 bit) are decoded and flattened onto white, which needs zlib;
+// if the Code node can't load it the photo is left out of the PDF (Word still has it).
+function pdfImage(img) {
+  if (img.format === 'jpeg') {
+    const cs = img.components === 1 ? '/DeviceGray' : img.components === 4 ? '/DeviceCMYK /Decode [1 0 1 0 1 0 1 0]' : '/DeviceRGB';
+    return [`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} ` +
+            `/ColorSpace ${cs} /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.bytes.length} >>`, img.bytes];
+  }
+  const chunks = [];
+  let palette = null, pos = 8;
+  while (pos < img.bytes.length) {
+    const len = img.bytes.readUInt32BE(pos), type = img.bytes.toString('latin1', pos + 4, pos + 8);
+    const data = img.bytes.subarray(pos + 8, pos + 8 + len);
+    if (type === 'IDAT') chunks.push(data);
+    else if (type === 'PLTE') palette = data;
+    else if (type === 'IEND') break;
+    pos += 12 + len;
+  }
+  const idat = Buffer.concat(chunks);
+  if (img.bitDepth === 8 && img.interlace === 0 && (img.colorType === 2 || img.colorType === 0)) {
+    const colors = img.colorType === 2 ? 3 : 1;
+    return [`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} ` +
+            `/ColorSpace /Device${colors === 3 ? 'RGB' : 'Gray'} /BitsPerComponent 8 /Filter /FlateDecode ` +
+            `/DecodeParms << /Predictor 15 /Colors ${colors} /BitsPerComponent 8 /Columns ${img.width} >> ` +
+            `/Length ${idat.length} >>`, idat];
+  }
+  if (img.interlace !== 0 || ![0, 2, 3, 4, 6].includes(img.colorType)) return null;
+  let zlib;
+  try { zlib = require('zlib'); } catch (e) { return null; }
+  // Decode any non-interlaced PNG (1–16 bit, grey / RGB / palette, with or without
+  // alpha) to 8-bit RGB, flattening transparency onto white.
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[img.colorType];
+  const bd = img.bitDepth, bitsPx = channels * bd;
+  const stride = Math.ceil(img.width * bitsPx / 8), fbpp = Math.max(1, bitsPx >> 3);
+  const raw = zlib.inflateSync(idat);
+  const rgb = Buffer.alloc(img.width * img.height * 3);
+  const max = (1 << Math.min(bd, 8)) - 1;
+  let prev = Buffer.alloc(stride);
+  for (let y = 0; y < img.height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const line = Buffer.from(raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)));
+    for (let x = 0; x < stride; x++) {
+      const a = x >= fbpp ? line[x - fbpp] : 0, b = prev[x], c = x >= fbpp ? prev[x - fbpp] : 0;
+      let p = 0;
+      if (filter === 1) p = a;
+      else if (filter === 2) p = b;
+      else if (filter === 3) p = (a + b) >> 1;
+      else if (filter === 4) { const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c); p = pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      line[x] = (line[x] + p) & 0xff;
+    }
+    // sample(x, ch): channel value scaled to 0–255 (palette index left as is)
+    const sample = (x, ch) => {
+      const i = x * channels + ch;
+      if (bd === 8) return line[i];
+      if (bd === 16) return line[i * 2];
+      const v = (line[(i * bd) >> 3] >> (8 - bd - ((i * bd) & 7))) & max;
+      return img.colorType === 3 ? v : Math.round(v * 255 / max);
+    };
+    for (let x = 0; x < img.width; x++) {
+      let r, g, bl, al = 255;
+      if (img.colorType === 3) { const i = sample(x, 0) * 3; r = palette[i]; g = palette[i + 1]; bl = palette[i + 2]; }
+      else if (img.colorType === 0) { r = g = bl = sample(x, 0); }
+      else if (img.colorType === 4) { r = g = bl = sample(x, 0); al = sample(x, 1); }
+      else { r = sample(x, 0); g = sample(x, 1); bl = sample(x, 2); if (img.colorType === 6) al = sample(x, 3); }
+      const o = (y * img.width + x) * 3, k = al / 255;
+      rgb[o] = Math.round(r * k + 255 * (1 - k)); rgb[o + 1] = Math.round(g * k + 255 * (1 - k)); rgb[o + 2] = Math.round(bl * k + 255 * (1 - k));
+    }
+    prev = line;
+  }
+  const data = zlib.deflateSync(rgb);
+  return [`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} ` +
+          `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${data.length} >>`, data];
+}
+
 // ---------------------------------------------------------------- PDF
 
-// Helvetica advance widths (1/1000 em) for WinAnsi codes 32–126 and 160–255.
-const HELV_ASCII = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
-const HELV_HIGH = [278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500];
-// Unicode → WinAnsi for the 128–159 block (curly quotes, dashes, ellipsis, …).
+// Times-Roman advance widths (1/1000 em) for WinAnsi codes 32–126, 160–255 and 128–159.
+const TIMES_ASCII = [250,333,408,500,500,833,778,180,333,333,500,564,250,333,250,278,500,500,500,500,500,500,500,500,500,500,278,278,564,564,564,444,921,722,667,667,722,611,556,722,722,333,389,722,611,889,722,722,556,722,667,556,611,722,722,944,722,722,611,333,278,333,469,500,333,444,500,444,500,444,333,500,500,278,278,500,278,778,500,500,500,500,333,389,278,500,500,722,500,500,444,480,200,480,541];
+const TIMES_HIGH = [250,333,500,500,500,500,200,500,333,760,276,500,564,333,760,333,400,564,300,300,333,500,453,250,333,300,310,500,750,750,750,444,722,722,722,722,722,722,889,667,611,611,611,611,333,333,333,333,722,722,722,722,722,722,722,564,722,722,722,722,722,722,556,500,444,444,444,444,444,444,667,444,444,444,444,444,278,278,278,278,500,500,500,500,500,500,500,564,500,500,500,500,500,500,500,500];
+const TIMES_SPECIAL = {128:500,129:350,130:333,131:500,132:444,133:1000,134:500,135:500,136:333,137:1000,138:556,139:333,140:889,141:350,142:611,143:350,144:350,145:333,146:333,147:444,148:444,149:350,150:500,151:1000,152:333,153:980,154:389,155:333,156:722,157:350,158:444,159:722};
+// Unicode → WinAnsi for the 128–159 block (curly quotes, dashes, ellipsis, bullet, …).
 const WINANSI_SPECIAL = {8364:128,8218:130,402:131,8222:132,8230:133,8224:134,8225:135,710:136,8240:137,352:138,8249:139,338:140,381:142,8216:145,8217:146,8220:147,8221:148,8226:149,8211:150,8212:151,732:152,8482:153,353:154,8250:155,339:156,382:158,376:159};
-const HELV_SPECIAL = {128:556,130:222,131:556,132:333,133:1000,134:556,135:556,136:333,137:1000,138:667,139:333,140:1000,142:611,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,152:333,153:1000,154:500,155:333,156:944,158:500,159:667};
 
 function winAnsiCodes(str) {
   const out = [];
@@ -144,15 +315,16 @@ function winAnsiCodes(str) {
     else if (WINANSI_SPECIAL[cp]) out.push(WINANSI_SPECIAL[cp]);
     else if (cp === 9) out.push(32);
     else if (cp === 8203 || cp === 65279) continue; // zero-width space / BOM
+    else if (cp === 8594) { out.push(45, 62); }     // → prints as ->
     else out.push(63); // '?'
   }
   return out;
 }
 
 function codeWidth(c) {
-  if (c >= 32 && c <= 126) return HELV_ASCII[c - 32];
-  if (c >= 160) return HELV_HIGH[c - 160];
-  return HELV_SPECIAL[c] || 556;
+  if (c >= 32 && c <= 126) return TIMES_ASCII[c - 32];
+  if (c >= 160) return TIMES_HIGH[c - 160];
+  return TIMES_SPECIAL[c] || 500;
 }
 
 function textWidth(str, size) {
@@ -187,43 +359,104 @@ const PT = 72;
 const PAGE_W = 8.5 * PT, PAGE_H = 11 * PT;
 const MARGIN_X = 0.85 * PT, MARGIN_TOP = 0.7 * PT, MARGIN_BOTTOM = 0.6 * PT;
 const CONTENT_W = PAGE_W - 2 * MARGIN_X;            // 6.8in — the width the PNGs were rendered at
-const BODY_SIZE = 10.5, LEADING = BODY_SIZE * 1.6, PARA_GAP = 10;
-const HEADER_GAP = 0.55 * PT;                       // letterhead main padding-top
-const DATE_GAP = 18;                                // space under the date line
+const BODY_SIZE = 11.5, LEADING = BODY_SIZE * 1.3;
+const PARA_GAP = 9;                                 // between paragraphs
+const HEADING_BEFORE = 6, HEADING_AFTER = 3;        // extra space around section headings
+const ITEM_GAP = 1.5;                               // between list items
+const MARKER_X = 0.25 * PT, ITEM_X = 0.5 * PT;      // list marker and text indents
+const HEADER_GAP = 0.45 * PT;                       // space under the letterhead
+const DATE_GAP = 14;                                // extra space under the date line
 const FOOTER_GAP = 24;                              // body must stop this far above the footer
-const INK = '0.239 0.220 0.212';                    // #3D3836
+const INK = '0.122 0.114 0.106';                    // #1F1D1B
 
-function buildPdf({ paragraphs, dateLine, header, footer, title }) {
+// Lays the blocks out as positioned lines: { x, y, text, underline }.
+function layoutPdf(blocks, dateLine, firstTop, bodyBottom) {
+  const pages = [[]];
+  let y = firstTop;
+  const newPage = () => { pages.push([]); y = PAGE_H - MARGIN_TOP - BODY_SIZE; };
+  // Room for n more lines on this page; `slack` covers the small gaps between them.
+  const room = (n, slack = 0) => y - (n - 1) * LEADING - slack >= bodyBottom;
+  const put = (text, x, underline) => {
+    if (y < bodyBottom) newPage();
+    pages[pages.length - 1].push({ text, x, y, underline: !!underline });
+    y -= LEADING;
+  };
+  const wrapPara = (t) => wrapLine(t, BODY_SIZE, CONTENT_W);
+  const wrapItem = (t) => wrapLine(t, BODY_SIZE, CONTENT_W - ITEM_X);
+  const firstLines = (b) => b ? (b.kind === 'list' ? wrapItem(b.items[0].text).length
+                                : b.kind === 'para' ? Math.min(2, wrapPara(b.text).length) : 1) : 0;
+
+  if (dateLine) { put(dateLine, MARGIN_X); y -= DATE_GAP; }
+
+  blocks.forEach((b, i) => {
+    const next = blocks[i + 1];
+    if (b.kind === 'heading') {
+      if (i > 0) y -= HEADING_BEFORE;
+      // Keep the heading with the start of what follows it.
+      const need = 1 + firstLines(next) + (next && next.keepNext ? firstLines(blocks[i + 2]) : 0);
+      if (!room(need, HEADING_AFTER + 2 * ITEM_GAP + PARA_GAP)) newPage();
+      put(b.text, MARGIN_X, true);
+      y -= HEADING_AFTER;
+      return;
+    }
+    if (b.kind === 'image') {
+      // The photo sits on its own, centred; it moves to the next page if it won't fit.
+      const { w, h } = photoSize(b.image, CONTENT_W);
+      let top = y + BODY_SIZE;
+      if (top - h < bodyBottom) { newPage(); top = y + BODY_SIZE; }
+      pages[pages.length - 1].push({ image: true, x: MARGIN_X + (CONTENT_W - w) / 2, y: top - h, w, h });
+      y = top - h - BODY_SIZE;
+      if (i < blocks.length - 1) y -= PARA_GAP;
+      return;
+    }
+    if (b.kind === 'tight') {
+      if (b.keepTogether && !room(b.lines.length)) newPage();
+      b.lines.forEach(l => wrapPara(l).forEach(w => put(w, MARGIN_X)));
+    } else if (b.kind === 'para') {
+      const lines = wrapPara(b.text);
+      const need = b.keepNext ? lines.length + firstLines(next) : Math.min(lines.length, 2);
+      if (!room(need)) newPage();
+      lines.forEach(w => put(w, MARGIN_X));
+      if (b.keepNext && next && next.kind === 'list') { y -= ITEM_GAP; return; }
+    } else if (b.kind === 'list') {
+      b.items.forEach((it, k) => {
+        const lines = wrapItem(it.text);
+        if (!room(Math.min(lines.length, 2))) newPage();
+        lines.forEach((w, j) => {
+          if (j === 0) {
+            if (y < bodyBottom) newPage();
+            pages[pages.length - 1].push({ text: it.marker, x: MARGIN_X + MARKER_X, y });
+          }
+          put(w, MARGIN_X + ITEM_X);
+        });
+        if (k < b.items.length - 1) y -= ITEM_GAP;
+      });
+    }
+    if (i < blocks.length - 1) y -= PARA_GAP;
+  });
+  return pages;
+}
+
+function buildPdf({ blocks, dateLine, header, footer, title }) {
   const hdr = parsePng(header), ftr = parsePng(footer);
   const hdrH = CONTENT_W * hdr.height / hdr.width;
   const ftrH = CONTENT_W * ftr.height / ftr.width;
   const bodyBottom = MARGIN_BOTTOM + ftrH + FOOTER_GAP;
-
-  // Lay text out into pages. y is the baseline of the next line.
-  const pages = [[]];
-  let y = PAGE_H - MARGIN_TOP - hdrH - HEADER_GAP - BODY_SIZE;
-  const newPage = () => { pages.push([]); y = PAGE_H - MARGIN_TOP - BODY_SIZE; };
-  const place = (text) => {
-    if (y < bodyBottom) newPage();
-    pages[pages.length - 1].push({ text, y });
-    y -= LEADING;
-  };
-  if (dateLine) { place(dateLine); y -= DATE_GAP; }
-  paragraphs.forEach((para, i) => {
-    const lines = para.flatMap(l => wrapLine(l, BODY_SIZE, CONTENT_W));
-    // Keep short paragraphs (the sign-off) together on one page.
-    if (lines.length <= 4 && y - (lines.length - 1) * LEADING < bodyBottom) newPage();
-    lines.forEach(place);
-    if (i < paragraphs.length - 1) y -= PARA_GAP;
-  });
+  // The photo is dropped (not the whole letter) if this PDF can't embed it.
+  const photoBlock = blocks.find(b => b.kind === 'image');
+  const photoObj = photoBlock ? pdfImage(photoBlock.image) : null;
+  if (photoBlock && !photoObj) blocks = blocks.filter(b => b !== photoBlock);
+  const pages = layoutPdf(blocks, dateLine, PAGE_H - MARGIN_TOP - hdrH - HEADER_GAP - BODY_SIZE, bodyBottom);
 
   // Objects: 1 catalog, 2 pages, 3 font, 4 header image, 5 footer image, 6 info,
-  // then a page + content stream pair per page.
+  // 7 composite photo (only when there is one), then a page + content stream pair per page.
   const objs = [];
-  const pageIds = pages.map((_, i) => 7 + i * 2);
+  const firstPage = photoObj ? 8 : 7;
+  const pageIds = pages.map((_, i) => firstPage + i * 2);
+  if (photoObj) objs[7] = photoObj;
   objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
   objs[2] = `<< /Type /Pages /Kids [${pageIds.map(id => id + ' 0 R').join(' ')}] /Count ${pages.length} >>`;
-  objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+  objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>';
   const image = (img) => [
     `<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} ` +
     `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode ` +
@@ -237,12 +470,24 @@ function buildPdf({ paragraphs, dateLine, header, footer, title }) {
     const ops = [];
     if (i === 0) ops.push(`q ${CONTENT_W.toFixed(2)} 0 0 ${hdrH.toFixed(2)} ${MARGIN_X.toFixed(2)} ${(PAGE_H - MARGIN_TOP - hdrH).toFixed(2)} cm /Im1 Do Q`);
     ops.push(`q ${CONTENT_W.toFixed(2)} 0 0 ${ftrH.toFixed(2)} ${MARGIN_X.toFixed(2)} ${MARGIN_BOTTOM.toFixed(2)} cm /Im2 Do Q`);
+    for (const p of lines.filter(l => l.image)) {
+      ops.push(`q ${p.w.toFixed(2)} 0 0 ${p.h.toFixed(2)} ${p.x.toFixed(2)} ${p.y.toFixed(2)} cm /Im3 Do Q`);
+    }
+    lines = lines.filter(l => !l.image);
     ops.push(`BT /F1 ${BODY_SIZE} Tf ${INK} rg`);
-    for (const l of lines) ops.push(`1 0 0 1 ${MARGIN_X.toFixed(2)} ${l.y.toFixed(2)} Tm ${pdfString(l.text)} Tj`);
+    for (const l of lines) ops.push(`1 0 0 1 ${l.x.toFixed(2)} ${l.y.toFixed(2)} Tm ${pdfString(l.text)} Tj`);
     ops.push('ET');
+    const rules = lines.filter(l => l.underline);
+    if (rules.length) {
+      ops.push(`${INK} RG 0.6 w`);
+      for (const l of rules) {
+        const uy = (l.y - 1.8).toFixed(2);
+        ops.push(`${l.x.toFixed(2)} ${uy} m ${(l.x + textWidth(l.text, BODY_SIZE)).toFixed(2)} ${uy} l S`);
+      }
+    }
     const stream = Buffer.from(ops.join('\n'), 'latin1');
     objs[pageIds[i]] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] ` +
-      `/Resources << /Font << /F1 3 0 R >> /XObject << /Im1 4 0 R /Im2 5 0 R >> >> ` +
+      `/Resources << /Font << /F1 3 0 R >> /XObject << /Im1 4 0 R /Im2 5 0 R${photoObj ? ' /Im3 7 0 R' : ''} >> >> ` +
       `/Contents ${pageIds[i] + 1} 0 R >>`;
     objs[pageIds[i] + 1] = [`<< /Length ${stream.length} >>`, stream];
   });
@@ -293,26 +538,59 @@ const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/mai
   'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
   'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
 
-const RUN_PR = '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:color w:val="3D3836"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr>';
+const HALF_PTS = Math.round(BODY_SIZE * 2);
+const LINE_240 = Math.round(240 * LEADING / BODY_SIZE / 1.15);   // Word "multiple" spacing close to the PDF
+const runPr = (underline) => `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>` +
+  (underline ? '<w:u w:val="single"/>' : '') +
+  `<w:color w:val="1F1D1B"/><w:sz w:val="${HALF_PTS}"/><w:szCs w:val="${HALF_PTS}"/></w:rPr>`;
+const run = (text, underline) => `<w:r>${runPr(underline)}<w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>`;
 
-function docxParagraph(lines, afterTwips) {
-  const runs = lines.map((l, i) =>
-    (i ? `<w:r>${RUN_PR}<w:br/></w:r>` : '') +
-    `<w:r>${RUN_PR}<w:t xml:space="preserve">${xmlEscape(l)}</w:t></w:r>`).join('');
-  return `<w:p><w:pPr><w:keepLines/><w:spacing w:before="0" w:after="${afterTwips}" w:line="384" w:lineRule="auto"/></w:pPr>${runs}</w:p>`;
+function wPara(runs, { before = 0, after = 0, keepNext = false, keepLines = true, ind = '', tabs = '' } = {}) {
+  return `<w:p><w:pPr>${keepNext ? '<w:keepNext/>' : ''}${keepLines ? '<w:keepLines/>' : ''}${tabs}` +
+    `<w:spacing w:before="${Math.round(before * TWIP)}" w:after="${Math.round(after * TWIP)}" w:line="${LINE_240}" w:lineRule="auto"/>` +
+    `${ind}</w:pPr>${runs}</w:p>`;
 }
 
-function buildDocx({ paragraphs, dateLine, header, footer, title }) {
+function docxBody(blocks, dateLine) {
+  const out = [];
+  if (dateLine) out.push(wPara(run(dateLine), { after: PARA_GAP + DATE_GAP }));
+  const markerTw = Math.round(MARKER_X * TWIP), itemTw = Math.round(ITEM_X * TWIP);
+  blocks.forEach((b, i) => {
+    const last = i === blocks.length - 1;
+    const next = blocks[i + 1];
+    if (b.kind === 'image') {
+      const { w, h } = photoSize(b.image, CONTENT_W);
+      out.push(`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="${last ? 0 : Math.round(PARA_GAP * TWIP)}" w:line="240" w:lineRule="auto"/></w:pPr>` +
+        drawing('rIdPhoto', 4, 'Composite photo', w, h) + `</w:p>`);
+    } else if (b.kind === 'heading') {
+      out.push(wPara(run(b.text, true), { before: i > 0 ? HEADING_BEFORE : 0, after: HEADING_AFTER, keepNext: true }));
+    } else if (b.kind === 'tight') {
+      const runs = b.lines.map((l, k) => (k ? `<w:r>${runPr()}<w:br/></w:r>` : '') + run(l)).join('');
+      out.push(wPara(runs, { after: last ? 0 : PARA_GAP }));
+    } else if (b.kind === 'para') {
+      const intoList = b.keepNext && next && next.kind === 'list';
+      out.push(wPara(run(b.text), { after: intoList ? ITEM_GAP : (last ? 0 : PARA_GAP), keepNext: b.keepNext }));
+    } else if (b.kind === 'list') {
+      b.items.forEach((it, k) => {
+        const lastItem = k === b.items.length - 1;
+        out.push(wPara(run(it.marker) + `<w:r>${runPr()}<w:tab/></w:r>` + run(it.text), {
+          after: lastItem ? (last ? 0 : PARA_GAP) : ITEM_GAP,
+          tabs: `<w:tabs><w:tab w:val="left" w:pos="${itemTw}"/></w:tabs>`,
+          ind: `<w:ind w:left="${itemTw}" w:hanging="${itemTw - markerTw}"/>`,
+        }));
+      });
+    }
+  });
+  return out.join('');
+}
+
+function buildDocx({ blocks, dateLine, header, footer, title }) {
   const hdr = parsePng(header), ftr = parsePng(footer);
   const hdrH = CONTENT_W * hdr.height / hdr.width;
   const ftrH = CONTENT_W * ftr.height / ftr.width;
 
-  const body = [];
-  if (dateLine) body.push(docxParagraph([dateLine], Math.round((PARA_GAP + DATE_GAP) * TWIP)));
-  paragraphs.forEach(p => body.push(docxParagraph(p, PARA_GAP * TWIP)));
-
   // Page 1 uses the letterhead as a first-page header; a spacer paragraph under it
-  // pushes the body down by the letterhead's 0.55in gap. Later pages have no header.
+  // pushes the body down by the letterhead gap. Later pages have no header.
   const sect =
     `<w:sectPr>` +
     `<w:headerReference w:type="first" r:id="rIdHdr"/>` +
@@ -327,7 +605,7 @@ function buildDocx({ paragraphs, dateLine, header, footer, title }) {
     `</w:sectPr>`;
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n` +
-    `<w:document ${NS}><w:body>${body.join('')}${sect}</w:body></w:document>`;
+    `<w:document ${NS}><w:body>${docxBody(blocks, dateLine)}${sect}</w:body></w:document>`;
 
   const zero = '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>';
   const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n` +
@@ -348,12 +626,15 @@ function buildDocx({ paragraphs, dateLine, header, footer, title }) {
     `</Relationships>`;
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
+  const photo = (blocks.find(b => b.kind === 'image') || {}).image;
+  const photoName = photo ? 'media/composite.' + (photo.format === 'jpeg' ? 'jpg' : 'png') : null;
   return zipStore([
     { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n` +
       `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
       `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
       `<Default Extension="xml" ContentType="application/xml"/>` +
       `<Default Extension="png" ContentType="image/png"/>` +
+      `<Default Extension="jpg" ContentType="image/jpeg"/>` +
       `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>` +
       `<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>` +
       `<Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>` +
@@ -376,7 +657,8 @@ function buildDocx({ paragraphs, dateLine, header, footer, title }) {
       ['rIdHdr', 'officeDocument/2006/relationships/header', 'header1.xml'],
       ['rIdHdrBlank', 'officeDocument/2006/relationships/header', 'header2.xml'],
       ['rIdFtr', 'officeDocument/2006/relationships/footer', 'footer1.xml'],
-      ['rIdFtrFirst', 'officeDocument/2006/relationships/footer', 'footer2.xml']]) },
+      ['rIdFtrFirst', 'officeDocument/2006/relationships/footer', 'footer2.xml'],
+      ...(photo ? [['rIdPhoto', 'officeDocument/2006/relationships/image', photoName]] : [])]) },
     { name: 'word/header1.xml', data: headerXml },
     { name: 'word/_rels/header1.xml.rels', data: rels([
       ['rIdImg', 'officeDocument/2006/relationships/image', 'media/header.png']]) },
@@ -389,9 +671,10 @@ function buildDocx({ paragraphs, dateLine, header, footer, title }) {
       ['rIdImg', 'officeDocument/2006/relationships/image', 'media/footer.png']]) },
     { name: 'word/media/header.png', data: hdr.png },
     { name: 'word/media/footer.png', data: ftr.png },
+    ...(photo ? [{ name: 'word/' + photoName, data: photo.bytes }] : []),
   ]);
 }
 
 // @export-start (removed when pasted into n8n)
-module.exports = { letterParagraphs, buildPdf, buildDocx, textWidth, wrapLine, zipStore, crc32 };
+module.exports = { letterBlocks, loadImage, withComposite, pdfImage, buildPdf, buildDocx, textWidth, wrapLine, zipStore, crc32 };
 // @export-end

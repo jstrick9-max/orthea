@@ -1,0 +1,183 @@
+{
+  "name": "C03 Consult - Fetch Composite",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerMode": "listenTrigger",
+        "channelName": "consult_composite",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        0
+      ],
+      "id": "5c0e1f2a-3b4c-4d5e-8f60-71829304a501",
+      "name": "Composite changed",
+      "credentials": {
+        "postgres": {
+          "id": "rsgkD1YxrO2lpYtT",
+          "name": "Postgres \u2013 Consult (consult_app)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.id, c.composite_url\nFROM consult.consults c\nWHERE c.id = $1::bigint\n  AND c.composite_url IS NOT NULL\n  AND c.composite_image IS NULL;",
+        "options": {
+          "queryReplacement": "={{ [$json.payload] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -816,
+        0
+      ],
+      "id": "5c0e1f2a-3b4c-4d5e-8f60-71829304a502",
+      "name": "Load composite URL",
+      "credentials": {
+        "postgres": {
+          "id": "rsgkD1YxrO2lpYtT",
+          "name": "Postgres \u2013 Consult (consult_app)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// C03 \u00b7 Build URL \u2014 turn the stored Budibase attachment URL into a full https URL,\n// and refuse anything that isn't the practice's Budibase (no fetching arbitrary hosts).\nconst BUDIBASE = 'https://orthea-budibase.eqawdd.easypanel.host';\nconst ALLOWED = [new URL(BUDIBASE).host];\n\nconst row = $input.first().json;\nlet raw = String(row.composite_url || '').trim();\nif (raw.startsWith('/')) raw = BUDIBASE + raw;\nconst url = new URL(raw);\nif (url.protocol !== 'https:' || !ALLOWED.includes(url.host)) {\n  throw new Error(`Composite URL host not allowed: ${url.host}`);\n}\nreturn [{ json: { id: row.id, source: row.composite_url, url: url.toString() } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        0
+      ],
+      "id": "5c0e1f2a-3b4c-4d5e-8f60-71829304a503",
+      "name": "Build URL"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "5c0e1f2a-3b4c-4d5e-8f60-71829304a504",
+      "name": "Download photo"
+    },
+    {
+      "parameters": {
+        "jsCode": "// C03 \u00b7 Encode \u2014 check the download is a JPEG/PNG and convert it to base64 for\n// consults.composite_image (the format /review and the C02 downloads read).\nconst MAX_BYTES = 15 * 1024 * 1024;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst isJpeg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8;\nconst isPng = buf.length > 8 && buf.readUInt32BE(0) === 0x89504e47;\nif (!isJpeg && !isPng) throw new Error(`Composite is not a JPEG or PNG (${buf.length} bytes)`);\nif (buf.length > MAX_BYTES) throw new Error(`Composite is too large (${buf.length} bytes)`);\nconst src = $('Build URL').first().json;\nreturn [{ json: { id: src.id, source: src.source, image: buf.toString('base64') } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "5c0e1f2a-3b4c-4d5e-8f60-71829304a505",
+      "name": "Encode"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consult.consults\n   SET composite_image = $2,\n       updated_at      = now()\n WHERE id = $1::bigint\n   AND composite_url = $3;   -- skip if the photo was changed again meanwhile",
+        "options": {
+          "queryReplacement": "={{ [$json.id, $json.image, $json.source] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        0
+      ],
+      "id": "5c0e1f2a-3b4c-4d5e-8f60-71829304a506",
+      "name": "Save photo",
+      "credentials": {
+        "postgres": {
+          "id": "rsgkD1YxrO2lpYtT",
+          "name": "Postgres \u2013 Consult (consult_app)"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Composite changed": {
+      "main": [
+        [
+          {
+            "node": "Load composite URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load composite URL": {
+      "main": [
+        [
+          {
+            "node": "Build URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build URL": {
+      "main": [
+        [
+          {
+            "node": "Download photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download photo": {
+      "main": [
+        [
+          {
+            "node": "Encode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encode": {
+      "main": [
+        [
+          {
+            "node": "Save photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}

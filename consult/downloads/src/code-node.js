@@ -15,7 +15,9 @@ const safe = s => String(s).replace(/[^A-Za-z0-9 .,'()-]/g, '').replace(/\s+/g, 
 const filename = safe(`${patient} - ${kind}`) + '.' + format;
 
 const doc = {
-  paragraphs: letterParagraphs(row.letter_text),
+  // Family letters carry the composite photo after the first paragraph, when there is one.
+  blocks: withComposite(letterBlocks(row.letter_text),
+                        row.output_type === 'family_letter' ? loadImage(row.composite_image) : null),
   dateLine: row.letter_date,
   header: HEADER_PNG,
   footer: FOOTER_PNG,
