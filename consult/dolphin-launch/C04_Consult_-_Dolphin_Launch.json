@@ -27,10 +27,45 @@
               "name": "consultUrl",
               "value": "PASTE-CONSULT-APP-URL-HERE",
               "type": "string"
+            },
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e30",
+              "name": "key",
+              "value": "={{ String($json.headers['x-orthea-key'] || $json.body.key || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e31",
+              "name": "guid",
+              "value": "={{ String($json.body.guid || '') }}",
+              "type": "string"
+            },
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e32",
+              "name": "dolphinId",
+              "value": "={{ String($json.body.dolphinId || '') }}",
+              "type": "string"
+            },
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e33",
+              "name": "firstName",
+              "value": "={{ String($json.body.firstName || '') }}",
+              "type": "string"
+            },
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e34",
+              "name": "lastName",
+              "value": "={{ String($json.body.lastName || '') }}",
+              "type": "string"
+            },
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e35",
+              "name": "birthday",
+              "value": "={{ String($json.body.birthday || '') }}",
+              "type": "string"
             }
           ]
         },
-        "includeOtherFields": true,
         "options": {}
       },
       "type": "n8n-nodes-base.set",
@@ -41,14 +76,14 @@
       ],
       "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e02",
       "name": "Settings",
-      "notes": "consultUrl = the published Consult app address up to (not including) #/ , e.g. https://orthea-budibase.eqawdd.easypanel.host/app/<app>/consult"
+      "notes": "consultUrl = the published Consult app address up to (not including) #/ . The other fields tidy the request for the query."
     },
     {
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT code, outcome, reason\nFROM consult.dolphin_launch($1, $2, $3, $4, $5, $6);",
         "options": {
-          "queryReplacement": "={{ [\n  String($('Launch requested').first().json.headers?.['x-orthea-key'] || $('Launch requested').first().json.body?.key || '').trim(),\n  String($('Launch requested').first().json.body?.guid ?? ''),\n  String($('Launch requested').first().json.body?.dolphinId ?? ''),\n  String($('Launch requested').first().json.body?.firstName ?? ''),\n  String($('Launch requested').first().json.body?.lastName ?? ''),\n  String($('Launch requested').first().json.body?.birthday ?? '')\n] }}"
+          "queryReplacement": "={{ [$json.key, $json.guid, $json.dolphinId, $json.firstName, $json.lastName, $json.birthday] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -129,7 +164,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ error: $json.reason || 'launch refused', keyReceived: !!String($('Launch requested').first().json.headers?.['x-orthea-key'] || $('Launch requested').first().json.body?.key || '').trim(), fieldsReceived: Object.keys($('Launch requested').first().json.body || {}).filter(k => k !== 'key') }) }}",
+        "responseBody": "={{ JSON.stringify({ error: $json.reason || 'launch refused', keyReceived: !!$('Settings').first().json.key, keyLength: $('Settings').first().json.key.length }) }}",
         "options": {
           "responseCode": 403,
           "responseHeaders": {
