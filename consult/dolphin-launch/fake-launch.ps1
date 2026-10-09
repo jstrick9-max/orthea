@@ -18,8 +18,13 @@ $Body = @{
 try {
   $r = Invoke-RestMethod -Method Post -Uri $Url -Headers @{ 'X-Orthea-Key' = $Key } `
          -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($Body))
-  Write-Host "Matched by: $($r.outcome)"
-  Write-Host "Open within 2 minutes: $($r.url)"
+  if ($r -is [string]) { try { $r = $r | ConvertFrom-Json } catch { } }
+  if ($r.url) {
+    Write-Host "Matched by: $($r.outcome)"
+    Write-Host "Open within 2 minutes: $($r.url)"
+  } else {
+    Write-Host "Unexpected reply: $($r | ConvertTo-Json -Compress)"
+  }
 } catch {
   Write-Host "Refused ($($_.Exception.Response.StatusCode.value__)): $($_.ErrorDetails.Message)"
 }

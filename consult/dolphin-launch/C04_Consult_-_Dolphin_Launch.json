@@ -140,10 +140,14 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ url: $('Settings').first().json.consultUrl.replace(/\\/+$/, '') + '#/launch?t=' + $json.code, outcome: $json.outcome }) }}",
+        "responseBody": "={{ { url: $('Settings').first().json.consultUrl.replace(/\\/+$/, '') + '#/launch?t=' + $json.code, outcome: $json.outcome } }}",
         "options": {
           "responseHeaders": {
             "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
               {
                 "name": "Cache-Control",
                 "value": "no-store"
@@ -164,11 +168,15 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ error: $json.reason || 'launch refused', keyReceived: !!$('Settings').first().json.key, keyLength: $('Settings').first().json.key.length }) }}",
+        "responseBody": "={{ { error: $json.reason || 'launch refused', keyReceived: !!$('Settings').first().json.key, keyLength: $('Settings').first().json.key.length } }}",
         "options": {
           "responseCode": 403,
           "responseHeaders": {
             "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
               {
                 "name": "Cache-Control",
                 "value": "no-store"
