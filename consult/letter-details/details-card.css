@@ -50,7 +50,8 @@
 [data-name="Details Card"] .spectrum-Textfield-input:focus,
 [data-name="Details Card"] textarea:focus { border-color: #446B63 !important; box-shadow: 0 0 0 2px rgba(68,107,99,0.18) !important; }
 [data-name="Family Address"] .spectrum-Textfield, [data-name="Referrer Address"] .spectrum-Textfield { min-height: 0 !important; }
-[data-name="Family Address"] textarea, [data-name="Referrer Address"] textarea { height: 60px !important; min-height: 60px !important; }
+[data-name="Referrer Address"] textarea { height: 60px !important; min-height: 60px !important; }
+[data-name="Family Address"] textarea { height: 96px !important; min-height: 96px !important; }
 
 [data-name="Details Locked Note"] p { font-size: 13px !important; color: #6B6460 !important; margin: 0 !important; }
 
