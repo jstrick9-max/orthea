@@ -18,7 +18,7 @@
       "credentials": {
         "postgres": {
           "id": "rsgkD1YxrO2lpYtT",
-          "name": "Postgres \u2013 Consult (consult_app)"
+          "name": "Postgres – Consult (consult_app)"
         }
       }
     },
@@ -41,13 +41,13 @@
       "credentials": {
         "postgres": {
           "id": "rsgkD1YxrO2lpYtT",
-          "name": "Postgres \u2013 Consult (consult_app)"
+          "name": "Postgres – Consult (consult_app)"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// C03 \u00b7 Build URL \u2014 turn the stored Budibase attachment URL into a full https URL,\n// and refuse anything that isn't the practice's Budibase (no fetching arbitrary hosts).\nconst BUDIBASE = 'https://orthea-budibase.eqawdd.easypanel.host';\nconst ALLOWED = [new URL(BUDIBASE).host];\n\nconst row = $input.first().json;\nlet raw = String(row.composite_url || '').trim();\nif (raw.startsWith('/')) raw = BUDIBASE + raw;\nconst url = new URL(raw);\nif (url.protocol !== 'https:' || !ALLOWED.includes(url.host)) {\n  throw new Error(`Composite URL host not allowed: ${url.host}`);\n}\nreturn [{ json: { id: row.id, source: row.composite_url, url: url.toString() } }];\n"
+        "jsCode": "// C03 · Build URL — turn the stored Budibase attachment URL into a full https URL\n// on the practice's Budibase (no fetching arbitrary hosts).\n// Budibase may store the link as \"/files/signed/…\", or as an absolute URL on an\n// internal / http host; any Budibase file path is re-pointed at the public host.\nconst BUDIBASE = 'https://orthea-budibase.eqawdd.easypanel.host';\nconst ALLOWED = [new URL(BUDIBASE).host];\n\nconst row = $input.first().json;\nconst raw = String(row.composite_url || '').trim();\nconst url = new URL(raw, BUDIBASE);\nif (/^\\/(files|api\\/assets|prod-budi-app-assets|app_)/.test(url.pathname)) {\n  url.protocol = 'https:';\n  url.hostname = new URL(BUDIBASE).hostname;\n  url.port = '';\n}\nif (url.protocol !== 'https:' || !ALLOWED.includes(url.host)) {\n  throw new Error(`Composite URL host not allowed: ${url.host}`);\n}\nreturn [{ json: { id: row.id, source: row.composite_url, url: url.toString() } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -81,7 +81,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// C03 \u00b7 Encode \u2014 check the download is a JPEG/PNG and convert it to base64 for\n// consults.composite_image (the format /review and the C02 downloads read).\nconst MAX_BYTES = 15 * 1024 * 1024;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst isJpeg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8;\nconst isPng = buf.length > 8 && buf.readUInt32BE(0) === 0x89504e47;\nif (!isJpeg && !isPng) throw new Error(`Composite is not a JPEG or PNG (${buf.length} bytes)`);\nif (buf.length > MAX_BYTES) throw new Error(`Composite is too large (${buf.length} bytes)`);\nconst src = $('Build URL').first().json;\nreturn [{ json: { id: src.id, source: src.source, image: buf.toString('base64') } }];\n"
+        "jsCode": "// C03 · Encode — check the download is a JPEG/PNG and convert it to base64 for\n// consults.composite_image (the format /review and the C02 downloads read).\nconst MAX_BYTES = 15 * 1024 * 1024;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst isJpeg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8;\nconst isPng = buf.length > 8 && buf.readUInt32BE(0) === 0x89504e47;\nif (!isJpeg && !isPng) throw new Error(`Composite is not a JPEG or PNG (${buf.length} bytes)`);\nif (buf.length > MAX_BYTES) throw new Error(`Composite is too large (${buf.length} bytes)`);\nconst src = $('Build URL').first().json;\nreturn [{ json: { id: src.id, source: src.source, image: buf.toString('base64') } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -111,7 +111,7 @@
       "credentials": {
         "postgres": {
           "id": "rsgkD1YxrO2lpYtT",
-          "name": "Postgres \u2013 Consult (consult_app)"
+          "name": "Postgres – Consult (consult_app)"
         }
       }
     }

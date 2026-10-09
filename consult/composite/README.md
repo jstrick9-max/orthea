@@ -81,8 +81,15 @@ Select **Details Form**, add these **between Fee Months and Details Locked Note*
    - `removeComposite` = `{{ [c14fc273d746a43588281249b153032b1].[removeComposite] }}`
 2. **Execute Query** → `C · Wait for composite` (`patientId`, `email` as above)
 3. **Refresh Data Provider** → **Composite Provider**
+4. **Update Field Value** → Form **Details Form**, Type **Reset to default value**, Field `compositeImage`
+5. **Update Field Value** → Form **Details Form**, Type **Reset to default value**, Field `removeComposite`
 
 (keep its existing refreshes and the "Details saved" notification after these)
+
+Actions 4–5 empty the upload box and untick **Remove the current photo** once the save is done.
+The box is only a picker: the photo in the letter is what shows on the **Family letter** tab.
+Ticking **Remove the current photo** takes the photo out of the letter when you press **Save
+details**; it doesn't clear the picker on its own.
 
 **Save Regen Details** — add the same three actions right after its
 **Execute Query `C · Save letter details`** action (before `C · Set generating`).
@@ -111,7 +118,17 @@ Append to the end of **New Embed** on `/review`:
 | Save again without touching the photo | nothing changes (no re-download) |
 | n8n → C03 executions | one run per photo change, ending in **Save photo** |
 
-If the photo doesn't appear: open the latest **C03** execution. A failure in **Download photo**
-means the Budibase file link couldn't be fetched — send me the error and the start of the
-`composite_url` value (Beekeeper: `SELECT left(composite_url, 60) FROM consult.consults ORDER BY
-updated_at DESC LIMIT 1;`).
+If the photo doesn't appear, check these in order:
+
+1. **n8n → C03 Consult - Fetch Composite** is **Active** (toggle at the top right). The Postgres
+   trigger only listens while the workflow is active; the editor's *Test workflow* button doesn't
+   catch saves made in Budibase.
+2. **C03 → Executions**: no run at all means the save didn't change the photo, or C03 isn't
+   active. A red run shows the failing node and its error.
+3. Beekeeper:
+   ```sql
+   SELECT id, status, left(composite_url, 70) AS url, composite_image IS NOT NULL AS has_image
+   FROM consult.consults ORDER BY updated_at DESC LIMIT 3;
+   ```
+   `url` empty → Budibase didn't send the file (the consult must be in **review**). `url` set and
+   `has_image` false → C03 couldn't fetch it.
