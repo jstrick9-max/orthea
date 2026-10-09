@@ -21,10 +21,16 @@ const CONSULT_PG = { postgres: { id: 'rsgkD1YxrO2lpYtT', name: 'Postgres – Con
 export function codeNodeSource() {
   const render = read('src/render.js').toString()
     .replace(/\/\/ @export-start[\s\S]*?\/\/ @export-end\n?/, '');
+  // Images go in as many short lines: very long lines get cut off when copied/pasted.
+  const b64Lines = (file) => {
+    const b64 = read(file).toString('base64');
+    const parts = b64.match(/.{1,100}/g).map(c => `  '${c}'`).join(',\n');
+    return `[\n${parts},\n].join('')`;
+  };
   const glue = read('src/code-node.js').toString()
-    .replace('__HEADER_PNG_BASE64__', read('assets/header.png').toString('base64'))
-    .replace('__FOOTER_PNG_BASE64__', read('assets/footer.png').toString('base64'));
-  return render + '\n' + glue;
+    .replace("'__HEADER_PNG_BASE64__'", () => b64Lines('assets/header.png'))
+    .replace("'__FOOTER_PNG_BASE64__'", () => b64Lines('assets/footer.png'));
+  return render + '\n' + glue.trimEnd() + '\n\n// ===== END OF BUILD FILE CODE (if you can see this line, the paste is complete) =====\n';
 }
 
 const LOAD_SQL = `SELECT c.id                                  AS consult_id,
