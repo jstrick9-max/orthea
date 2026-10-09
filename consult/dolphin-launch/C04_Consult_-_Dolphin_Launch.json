@@ -1,0 +1,216 @@
+{
+  "name": "C04 Consult - Dolphin Launch",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consult/dolphin/launch",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        0
+      ],
+      "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e01",
+      "name": "Launch requested",
+      "webhookId": "b8e41f6d-2a9c-4c73-8e05-6f1d3a7b9c24"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e20",
+              "name": "consultUrl",
+              "value": "PASTE-CONSULT-APP-URL-HERE",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -816,
+        0
+      ],
+      "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e02",
+      "name": "Settings",
+      "notes": "consultUrl = the published Consult app address up to (not including) #/ , e.g. https://orthea-budibase.eqawdd.easypanel.host/app/<app>/consult"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT code, outcome, reason\nFROM consult.dolphin_launch($1, $2, $3, $4, $5, $6);",
+        "options": {
+          "queryReplacement": "={{ [\n  String($json.headers['x-orthea-key'] ?? ''),\n  String($json.body?.guid ?? ''),\n  String($json.body?.dolphinId ?? ''),\n  String($json.body?.firstName ?? ''),\n  String($json.body?.lastName ?? ''),\n  String($json.body?.birthday ?? '')\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        0
+      ],
+      "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e03",
+      "name": "Find or create patient",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "rsgkD1YxrO2lpYtT",
+          "name": "Postgres – Consult (consult_app)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e21",
+              "leftValue": "={{ !!$json.code }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e04",
+      "name": "Code issued?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ url: $('Settings').first().json.consultUrl.replace(/\\/+$/, '') + '#/launch?t=' + $json.code, outcome: $json.outcome }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -128,
+        -96
+      ],
+      "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e05",
+      "name": "Send link"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: $json.reason || 'launch refused' }) }}",
+        "options": {
+          "responseCode": 403,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -128,
+        96
+      ],
+      "id": "4d7e2b91-6c3a-4f58-9e1d-0b2a7c5f3e06",
+      "name": "Refuse"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Launch requested": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Find or create patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find or create patient": {
+      "main": [
+        [
+          {
+            "node": "Code issued?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code issued?": {
+      "main": [
+        [
+          {
+            "node": "Send link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refuse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false
+  },
+  "tags": []
+}

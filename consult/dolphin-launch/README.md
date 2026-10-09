@@ -11,7 +11,7 @@ browser  …/consult#/launch?t=<code> ─▶ Budibase /launch ─▶ consult.red
 | Step | What | Status |
 |---|---|---|
 | 1 | Database: switch, keys, codes, launch + redeem functions | **built, tested** — `01_dolphin_launch.sql` |
-| 2 | n8n C04 "Consult - Dolphin Launch" webhook | next |
+| 2 | n8n C04 "Consult - Dolphin Launch" webhook | **built** — `C04_Consult_-_Dolphin_Launch.json`, test with `fake-launch.ps1` |
 | 3 | Budibase `/launch` screen | after C04 |
 | 4 | Launcher (PowerShell first) + `dolphin.ini` line | after `/launch` works |
 | 5 | Rollout at LSO, hide Add patient | after Dolphin's OK |
@@ -48,4 +48,35 @@ Tested on Postgres 16 against a copy of the live columns: `tests/run.sh` (19 che
    ```
    Check the name matches first with `SELECT id, name FROM public.practices;`.
 
-The practice key is made in step 2, when C04 is ready to test.
+## Step 2 — n8n C04 and a fake launch
+
+C04 receives the button's details, calls `consult.dolphin_launch`, and answers with the link
+the launcher will open:
+
+```
+POST https://listen.ortheasecurity.com/webhook/consult/dolphin/launch
+Header  X-Orthea-Key: <practice key>
+Body    {"guid":"{…}","dolphinId":"TESTER","firstName":"Test","lastName":"Patient","birthday":"07/15/1987"}
+→ 200 {"url":"…/consult#/launch?t=<code>","outcome":"created"}     or 403 {"error":"…"}
+```
+
+Successful runs aren't saved in n8n's execution list (they carry patient names); failed runs are.
+
+1. **Make LSO's key** (Beekeeper, admin):
+   ```sql
+   SELECT consult.create_launch_key(
+     (SELECT id FROM public.practices WHERE name ILIKE '%Lemchen%'), 'LSO workstations');
+   ```
+   Copy the `olk_…` value somewhere safe (password manager). It can't be shown again; if it's
+   lost, revoke it and make another.
+2. **Find the Consult app address:** open the published Consult app on `/patients`, copy the
+   address bar and drop everything from `#/` on.
+3. **Import** `C04_Consult_-_Dolphin_Launch.json` into n8n. In **Settings**, paste that address
+   into `consultUrl`. Check **Find or create patient** uses **Postgres – Consult (consult_app)**.
+   Save, then **Active**.
+4. **Fake launch:** open `fake-launch.ps1` in Notepad, paste the key into `$Key`, save, then in
+   PowerShell run `powershell -ExecutionPolicy Bypass -File .\fake-launch.ps1`.
+   Expect `Matched by: created` and a link. Run it again: `Matched by: guid`.
+   The link won't open a patient yet: `/launch` is step 3.
+5. Clean-up after testing: the fake patient is "Test Patient" (Dolphin ID TESTER); archive it
+   from the patient list.
