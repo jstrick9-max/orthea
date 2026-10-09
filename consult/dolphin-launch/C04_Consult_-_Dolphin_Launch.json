@@ -48,7 +48,7 @@
         "operation": "executeQuery",
         "query": "SELECT code, outcome, reason\nFROM consult.dolphin_launch($1, $2, $3, $4, $5, $6);",
         "options": {
-          "queryReplacement": "={{ [\n  String($json.headers['x-orthea-key'] ?? ''),\n  String($json.body?.guid ?? ''),\n  String($json.body?.dolphinId ?? ''),\n  String($json.body?.firstName ?? ''),\n  String($json.body?.lastName ?? ''),\n  String($json.body?.birthday ?? '')\n] }}"
+          "queryReplacement": "={{ [\n  String($('Launch requested').first().json.headers?.['x-orthea-key'] || $('Launch requested').first().json.body?.key || '').trim(),\n  String($('Launch requested').first().json.body?.guid ?? ''),\n  String($('Launch requested').first().json.body?.dolphinId ?? ''),\n  String($('Launch requested').first().json.body?.firstName ?? ''),\n  String($('Launch requested').first().json.body?.lastName ?? ''),\n  String($('Launch requested').first().json.body?.birthday ?? '')\n] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -129,7 +129,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ error: $json.reason || 'launch refused' }) }}",
+        "responseBody": "={{ JSON.stringify({ error: $json.reason || 'launch refused', keyReceived: !!String($('Launch requested').first().json.headers?.['x-orthea-key'] || $('Launch requested').first().json.body?.key || '').trim(), fieldsReceived: Object.keys($('Launch requested').first().json.body || {}).filter(k => k !== 'key') }) }}",
         "options": {
           "responseCode": 403,
           "responseHeaders": {

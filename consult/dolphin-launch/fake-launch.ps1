@@ -7,6 +7,7 @@ $Url = 'https://listen.ortheasecurity.com/webhook/consult/dolphin/launch'
 
 # A made-up Dolphin patient (the same shape Dolphin's toolbar tokens give us)
 $Body = @{
+  key       = $Key
   guid      = '{8DEB5881-00BC-4F30-8BCF-798E892B9602}'
   dolphinId = 'TESTER'
   firstName = 'Test'
@@ -20,5 +21,5 @@ try {
   Write-Host "Matched by: $($r.outcome)"
   Write-Host "Open within 2 minutes: $($r.url)"
 } catch {
-  Write-Host "Refused: $($_.ErrorDetails.Message)"
+  Write-Host "Refused ($($_.Exception.Response.StatusCode.value__)): $($_.ErrorDetails.Message)"
 }
