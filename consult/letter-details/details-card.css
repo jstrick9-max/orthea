@@ -17,18 +17,21 @@
 [data-name="Details Card Body"] > div { padding: 16px 20px !important; box-sizing: border-box !important; min-width: 0 !important; }
 [data-name="Details Form"] > div { display: block !important; width: 100% !important; }
 
-/* 2-column grid; addresses, section labels, notes and actions full width */
-[data-name="Details Form"] > div > div {
+/* 2-column grid. The grid is the element that directly holds the field wrappers
+   (found with :has, so it doesn't depend on Budibase's nesting depth). Each field
+   wrapper is display:contents, so its inner div is the grid item.
+   Full width: section labels, family address, photo, remove tick, note, actions. */
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) {
   display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important;
-  column-gap: 12px !important; row-gap: 10px !important;
+  column-gap: 14px !important; row-gap: 10px !important; align-items: start !important;
 }
-[data-name="Details Form"] > div > div > *, [data-name="Details Form"] > div > div > * > * { grid-column: span 1 !important; min-width: 0 !important; }
-[data-name^="Details Section"], [data-name^="Details Section"] > div,
-[data-name="Family Address"], [data-name="Family Address"] > div,
-[data-name="Referrer Picker"], [data-name="Referrer Picker"] > div,
-[data-name="Referrer Address"], [data-name="Referrer Address"] > div,
-[data-name="Details Locked Note"], [data-name="Details Locked Note"] > div,
-[data-name="Details Actions"], [data-name="Details Actions"] > div { grid-column: 1 / -1 !important; }
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > * > * { grid-column: span 1 !important; min-width: 0 !important; margin: 0 !important; }
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > [data-name^="Details Section"] > div,
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > [data-name="Family Address"] > div,
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > [data-name="Composite Photo"] > div,
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > [data-name="Remove Composite"] > div,
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > [data-name="Details Locked Note"] > div,
+[data-name="Details Form"] div:has(> [data-name="Parent 1 First"]) > [data-name="Details Actions"] > div { grid-column: 1 / -1 !important; }
 
 [data-name^="Details Section"] p {
   font-size: 12px !important; font-weight: 600 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important;
