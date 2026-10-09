@@ -1,6 +1,7 @@
 -- Orthea Consult — Dolphin toolbar launch (step 1: database).
 -- Run ONCE as orthea_admin in Beekeeper. Touches only the consult schema; Voice is untouched.
--- Safe to re-run.
+-- Safe to re-run: every statement checks before it changes anything. There is no BEGIN/COMMIT,
+-- so Beekeeper stays in Auto Commit; if a statement fails, fix the cause and run the file again.
 --
 -- What it adds
 --   consult.practice_settings.dolphin_linked   per-practice switch (off for everyone)
@@ -13,7 +14,6 @@
 -- The two tables are owned by orthea_admin and consult_app gets no access to them;
 -- consult_app can only call the two functions (SECURITY DEFINER).
 
-BEGIN;
 
 -- ---------------------------------------------------------------- settings + tables
 
@@ -256,7 +256,6 @@ REVOKE ALL ON FUNCTION consult.create_launch_key(uuid, text)                    
 GRANT EXECUTE ON FUNCTION consult.dolphin_launch(text, text, text, text, text, text) TO consult_app;
 GRANT EXECUTE ON FUNCTION consult.redeem_launch(text, text)                         TO consult_app;
 
-COMMIT;
 
 -- ---------------------------------------------------------------- checks (read-only)
 
