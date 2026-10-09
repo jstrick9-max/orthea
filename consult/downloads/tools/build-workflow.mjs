@@ -227,4 +227,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = path.join(root, 'C02_Consult_-_Download_Letter.json');
   writeFileSync(out, JSON.stringify(buildFromLive(), null, 2) + '\n');
   console.log('wrote', out);
+  // The same code as a plain file, for pasting straight into the Build file node.
+  const code = path.join(root, 'C02_Build_file_code.js');
+  writeFileSync(code, codeNodeSource());
+  console.log('wrote', code);
 }
