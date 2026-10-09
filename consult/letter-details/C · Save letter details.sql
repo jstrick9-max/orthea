@@ -1,7 +1,8 @@
 -- NEW Budibase query "C · Save letter details" (Consult DB, Function: Update)
 -- Parameters (all default blank): patientId, email, parent1First, parent1Last, parent2First,
 --   parent2Last, mailingAddress, refId, origRefId, refAddress, feeTotal, feeInitial, feeMonthly, feeMonths
--- Names/addresses: blank = keep what's on file.  Fees: blank = clear (letter drops Fees).
+-- Names/addresses: blank = keep what's on file. Addresses keep their line breaks (Budibase
+--   sends them as a literal \n, turned back into real newlines here).  Fees: blank = clear (letter drops Fees).
 -- Referrer: refId re-links the patient. refAddress belongs to the dentist the form loaded with
 --   (origRefId), so it is saved only when the dentist was not changed, or when the patient had
 --   no dentist before (then it goes to the newly picked one).
@@ -29,10 +30,10 @@ inp AS (
          NULLIF(NULLIF(trim({{ parent1Last }}), ''), '``')    AS p1_last,
          NULLIF(NULLIF(trim({{ parent2First }}), ''), '``')   AS p2_first,
          NULLIF(NULLIF(trim({{ parent2Last }}), ''), '``')    AS p2_last,
-         NULLIF(NULLIF(trim({{ mailingAddress }}), ''), '``') AS mailing_address,
+         NULLIF(NULLIF(trim(regexp_replace(replace({{ mailingAddress }}, '\n', E'\n'), '[ \t]*\n[ \t]*', E'\n', 'g')), ''), '``') AS mailing_address,
          CASE WHEN trim({{ refId }})     ~ '^[0-9]+$' THEN trim({{ refId }})::bigint     END AS ref_id,
          CASE WHEN trim({{ origRefId }}) ~ '^[0-9]+$' THEN trim({{ origRefId }})::bigint END AS orig_ref_id,
-         NULLIF(NULLIF(trim({{ refAddress }}), ''), '``')     AS ref_address,
+         NULLIF(NULLIF(trim(regexp_replace(replace({{ refAddress }}, '\n', E'\n'), '[ \t]*\n[ \t]*', E'\n', 'g')), ''), '``') AS ref_address,
          NULLIF(regexp_replace(COALESCE({{ feeTotal }}, ''),   '[^0-9.]', '', 'g'), '')::numeric        AS fee_total,
          NULLIF(regexp_replace(COALESCE({{ feeInitial }}, ''), '[^0-9.]', '', 'g'), '')::numeric        AS fee_initial,
          NULLIF(regexp_replace(COALESCE({{ feeMonthly }}, ''), '[^0-9.]', '', 'g'), '')::numeric        AS fee_monthly,
