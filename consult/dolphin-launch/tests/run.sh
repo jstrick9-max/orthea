@@ -10,4 +10,5 @@ su postgres -c "$P -U orthea_admin -d t -f '$D/../01_dolphin_launch.sql'" >/dev/
 su postgres -c "$P -U orthea_admin -d t -f '$D/../02_redeem_repeat.sql'" >/dev/null
 su postgres -c "$P -U orthea_admin -d t -f '$D/../03_dolphin_open.sql'" >/dev/null
 su postgres -c "$P -U orthea_admin -d t -f '$D/../03_dolphin_open.sql'" >/dev/null 2>&1   # re-run is safe
+su postgres -c "$P -U orthea_admin -d t -f '$D/../04_blank_birthday.sql'" >/dev/null
 su postgres -c "$B/psql -X -h /tmp/pgt -p 5499 -U postgres -d t -f '$D/test.sql'"

@@ -1,0 +1,193 @@
+/* =====================================================================================
+   Orthea Consult — shared shell (every screen links to this file)
+   Hosted at https://orthea-assets.s3.us-east-2.amazonaws.com/orthea-consult.css
+   Each screen's own embed keeps only that screen's layout rules.
+   Rules here use doubled [data-name] selectors on purpose: they must beat the
+   per-screen embeds, which load after this file.
+   ===================================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --o-ink: #1F1D1B;
+  --o-ink-2: #6B6460;      /* secondary text */
+  --o-ink-3: #8B8179;      /* labels, captions */
+  --o-cream: #F7F3EE;      /* page */
+  --o-paper: #FFFFFF;      /* cards */
+  --o-line: #E8E1D7;       /* hairlines */
+  --o-line-2: #D9D0C4;     /* button borders */
+  --o-green: #2F4A43;      /* Consult brand, headings on pale green */
+  --o-green-2: #446B63;
+  --o-pale: #DCE7E4;       /* card headers, active nav */
+  --o-clay: #B5653D;       /* primary action */
+  --o-clay-hover: #9F5732;
+  --o-warn-bg: #FDF4E7;
+  --o-warn-line: #E8D3AE;
+  --o-warn-ink: #8A6A2F;
+  --o-serif: 'Fraunces', Georgia, serif;
+  --o-sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ----- Base: Inter everywhere, at zero specificity so any title rule wins ----- */
+body,
+:where(.spectrum, .spectrum *:not(i[class^="ph"]):not(i[class*=" ph"])) {
+  font-family: var(--o-sans) !important;
+}
+body, .main-wrapper, .main-content-area { background-color: var(--o-cream) !important; }
+
+/* ----- Budibase chrome ----- */
+.free-footer { display: none !important; }
+.nav-wrapper .nav--left { border-right: 1px solid var(--o-line) !important; }
+.nav .link, .nav .link *, .links .link, .links .link * { font-size: 14px !important; }
+.user .spectrum-Avatar { background: var(--o-green) !important; color: #FFFFFF !important; }
+
+/* ----- One page edge: full width under the nav, content starts 32px from it ----- */
+.main-content-area .main, .main.size-s, .main.size-m, .main.size-l {
+  max-width: none !important; width: 100% !important;
+  margin-left: 0 !important; margin-right: 0 !important;
+  padding-left: 0 !important; padding-right: 0 !important;
+}
+[data-name="Patients Container"][data-name],
+[data-name="Consult Container"][data-name],
+[data-name="Review Container"][data-name],
+[data-name="New Patient Container"][data-name] > div {
+  margin: 28px 0 40px !important;
+  padding: 0 32px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+[data-name="Patients Container"][data-name] { max-width: 1440px !important; }
+[data-name="New Patient Container"][data-name] > div { max-width: 1000px !important; }
+[data-name="Consult Container"][data-name], [data-name="Review Container"][data-name] { max-width: none !important; }
+
+/* ----- Page titles: one serif style on every screen ----- */
+[data-name="Patients Title"][data-name][data-name][data-name],
+[data-name="Patients Title"][data-name][data-name][data-name] *,
+[data-name="Consult Title"][data-name][data-name][data-name],
+[data-name="Consult Title"][data-name][data-name][data-name] *,
+[data-name="Add Patient Title"][data-name][data-name][data-name],
+[data-name="Add Patient Title"][data-name][data-name][data-name] *,
+[data-name="Review Name"][data-name][data-name][data-name] p {
+  font-family: var(--o-serif) !important;
+  font-size: 28px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  color: var(--o-ink) !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+/* Patient name inside a card (Intake) */
+[data-name="Patient Name"][data-name][data-name][data-name] p {
+  font-family: var(--o-serif) !important; font-size: 20px !important; font-weight: 500 !important;
+  color: var(--o-ink) !important; margin: 0 !important;
+}
+
+/* ----- Card headers: one style (pale green band, small dark-green label) ----- */
+[data-name$="Card Title"]:not([data-name="Flags Card Title"])[data-name][data-name][data-name] p {
+  font-family: var(--o-sans) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--o-green) !important;
+  -webkit-text-fill-color: var(--o-green) !important;
+  margin: 0 !important;
+}
+
+/* ----- Field labels and inputs ----- */
+.spectrum-FieldLabel {
+  font-size: 11px !important; font-weight: 500 !important; letter-spacing: 0.05em !important;
+  text-transform: uppercase !important; color: var(--o-ink-3) !important;
+}
+.spectrum-Textfield-input, .spectrum-Form-item textarea, .spectrum-Picker {
+  background-color: #FCFCFB !important; border: 1px solid var(--o-pale) !important;
+  border-radius: 7px !important; font-size: 13px !important; color: var(--o-ink) !important;
+}
+.spectrum-Textfield-input:focus, .spectrum-Form-item textarea:focus, .spectrum-Picker:focus {
+  border-color: var(--o-green-2) !important; box-shadow: none !important;
+}
+.spectrum-Textfield-input::placeholder, .spectrum-Form-item textarea::placeholder {
+  color: #A8A099 !important; -webkit-text-fill-color: #A8A099 !important; opacity: 1 !important;
+}
+
+/* ----- Buttons: primary (Action), secondary, quiet link, disabled -----
+   Patients, Archive, Intake and Add patient only. Review styles each of its buttons by name. */
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--cta {
+  background: var(--o-clay) !important; border: 1px solid var(--o-clay) !important;
+  border-radius: 10px !important; min-height: 36px !important; padding: 8px 18px !important;
+  box-shadow: none !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--cta .spectrum-Button-label {
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+  font-size: 14px !important; font-weight: 600 !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--cta:hover { background: var(--o-clay-hover) !important; border-color: var(--o-clay-hover) !important; }
+
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--secondary:not(.spectrum-Button--quiet) {
+  background: var(--o-paper) !important; border: 1px solid var(--o-line-2) !important;
+  border-radius: 10px !important; min-height: 36px !important; padding: 8px 16px !important;
+  box-shadow: none !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--secondary:not(.spectrum-Button--quiet) .spectrum-Button-label {
+  color: var(--o-ink) !important; -webkit-text-fill-color: var(--o-ink) !important;
+  font-size: 13px !important; font-weight: 500 !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--secondary:not(.spectrum-Button--quiet):hover {
+  background: #FAF7F3 !important; border-color: #BFB5A7 !important;
+}
+
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--quiet {
+  background: transparent !important; border: 1px solid transparent !important;
+  border-radius: 8px !important; min-height: 30px !important; padding: 4px 10px !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--quiet:not(.spectrum-Button--warning) .spectrum-Button-label {
+  color: var(--o-ink-2) !important; -webkit-text-fill-color: var(--o-ink-2) !important;
+  font-size: 13px !important; font-weight: 500 !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--quiet.spectrum-Button--warning .spectrum-Button-label {
+  color: #A23B2A !important; -webkit-text-fill-color: #A23B2A !important;
+  font-size: 13px !important; font-weight: 500 !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button--quiet:hover { background: #EFE9E1 !important; }
+
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button:disabled,
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button.is-disabled {
+  background: #EDE7DF !important; border-color: #E1D8CC !important; cursor: not-allowed !important;
+}
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button:disabled .spectrum-Button-label,
+:is([data-name="Patients Container"], [data-name="Consult Container"], [data-name="New Patient Container"]) .spectrum-Button.spectrum-Button.is-disabled .spectrum-Button-label {
+  color: var(--o-ink-3) !important; -webkit-text-fill-color: var(--o-ink-3) !important;
+}
+
+/* ----- Notices: every *Warning text is the same soft amber box ----- */
+[data-name$="Warning"][data-name] {
+  background: var(--o-warn-bg) !important; border: 1px solid var(--o-warn-line) !important;
+  border-radius: 7px !important; padding: 10px 14px !important; box-sizing: border-box !important;
+}
+[data-name$="Warning"][data-name] p {
+  font-size: 12px !important; line-height: 1.45 !important; margin: 0 !important;
+  color: var(--o-warn-ink) !important; -webkit-text-fill-color: var(--o-warn-ink) !important;
+}
+[data-name="Save Hint"] p, [data-name="Input Needed Note"] p {
+  font-size: 13px !important; color: #8A5A12 !important; margin: 0 !important;
+}
+
+/* ----- Pills ----- */
+[data-name="Dolphin Tag"] > div { display: flex !important; justify-content: flex-start !important; }
+[data-name="Dolphin Tag"] p {
+  display: inline-block !important; width: fit-content !important; margin: 0 !important;
+  font-size: 12px !important; font-weight: 500 !important; line-height: 1.4 !important;
+  padding: 3px 10px !important; border-radius: 999px !important;
+  color: var(--o-green) !important; background: var(--o-pale) !important;
+}
+
+/* ----- Patients / Archive: count sits beside the title ----- */
+[data-name="Patients Container"] [data-name="Header Title Container"][data-name] > div {
+  justify-content: flex-start !important; gap: 14px !important;
+}
+[data-name="Patients Container"] [data-name="Patients Count"][data-name] p {
+  font-size: 13px !important; color: var(--o-ink-3) !important;
+}
+
+/* ----- Intake: referring dentist picker spans the card ----- */
+[data-name="Referrer Picker"][data-name], [data-name="Referrer Picker"][data-name] > div { grid-column: 1 / -1 !important; }
+[data-name="Referrer Picker"] .spectrum-Picker { width: 100% !important; }

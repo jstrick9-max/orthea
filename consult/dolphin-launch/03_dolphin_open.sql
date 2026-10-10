@@ -50,6 +50,8 @@ BEGIN
     EXCEPTION WHEN others THEN v_dob := NULL;
     END;
   END IF;
+  -- Dolphin sends 12/30/1899 (its "no date") when the birthday is blank.
+  IF v_dob < DATE '1901-01-01' THEN v_dob := NULL; END IF;
 
   -- 1. GUID
   IF v_guid IS NOT NULL THEN

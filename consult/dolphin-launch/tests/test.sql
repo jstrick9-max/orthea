@@ -129,6 +129,10 @@ SELECT (patient_id IS NULL AND reason = 'no Dolphin patient GUID or ID') AS ok F
 \if :ok \echo ok  open: no GUID or ID refused \else \echo FAIL open no ids \quit \endif
 SELECT (dob = '2016-05-05') AS ok FROM consult.patients WHERE dolphin_patient_id = 'VALE01' \gset
 \if :ok \echo ok  open: birthday stored \else \echo FAIL open dob \quit \endif
+SELECT (outcome = 'created') AS ok FROM consult.dolphin_open('staff@lso.com', '{FFFFFFFF-0000-0000-0000-000000000007}', 'BLANK01', 'No', 'Birthday', '12/30/1899') \gset
+\if :ok \echo ok  open: patient with the Dolphin blank birthday created \else \echo FAIL open blank dob \quit \endif
+SELECT (dob IS NULL) AS ok FROM consult.patients WHERE dolphin_patient_id = 'BLANK01' \gset
+\if :ok \echo ok  open: 12/30/1899 stored as no birthday \else \echo FAIL open 1899 \quit \endif
 SELECT (count(*) >= 2) AS ok FROM consult.audit_log WHERE actor = 'staff@lso.com' AND action LIKE 'dolphin launch%' \gset
 \if :ok \echo ok  open: audit rows name the staff member \else \echo FAIL open audit \quit \endif
 \set ON_ERROR_STOP 0
