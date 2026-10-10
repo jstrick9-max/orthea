@@ -109,4 +109,30 @@ SELECT consult.create_launch_key('11111111-1111-1111-1111-111111111111','x');
 \echo ok  (the three "permission denied" errors above are expected)
 SELECT count(*) AS n FROM consult.audit_log WHERE actor = 'dolphin' \gset
 \echo ok  audit rows written: :n
+
+-- 13. direct path: consult.dolphin_open (practice from the signed-in user, no key)
+SELECT (destination = '/intake' AND outcome = 'created' AND patient_name = 'Nina Vale') AS ok
+  FROM consult.dolphin_open('Staff@LSO.com', '{FFFFFFFF-0000-0000-0000-000000000006}', 'VALE01', 'Nina', 'Vale', '05/05/2016') \gset
+\if :ok \echo ok  open: new patient created, → /intake \else \echo FAIL open create \quit \endif
+SELECT (outcome = 'guid' AND patient_id IS NOT NULL) AS ok
+  FROM consult.dolphin_open('staff@lso.com', 'ffffffff-0000-0000-0000-000000000006', 'VALE01', 'Nina', 'Vale', '05/05/2016') \gset
+\if :ok \echo ok  open: second click (Budibase double load) finds the same patient \else \echo FAIL open repeat \quit \endif
+SELECT (count(*) = 1) AS ok FROM consult.patients WHERE dolphin_patient_id = 'VALE01' \gset
+\if :ok \echo ok  open: no duplicate patient \else \echo FAIL open duplicate \quit \endif
+SELECT (destination = '/review') AS ok FROM consult.dolphin_open('staff@lso.com', '{BBBBBBBB-0000-0000-0000-000000000002}', 'DEMO-1002', 'Leo', 'Marsh', '04/22/2014') \gset
+\if :ok \echo ok  open: patient with a consult → /review \else \echo FAIL open review \quit \endif
+SELECT (patient_id IS NULL AND reason LIKE 'Dolphin link is off%') AS ok FROM consult.dolphin_open('other@b.com', '{X}', 'X', 'A', 'B', '') \gset
+\if :ok \echo ok  open: user of a practice without the Dolphin link refused \else \echo FAIL open other practice \quit \endif
+SELECT (patient_id IS NULL) AS ok FROM consult.dolphin_open('gone@lso.com', '{X}', 'X', 'A', 'B', '') \gset
+\if :ok \echo ok  open: inactive user refused \else \echo FAIL open inactive \quit \endif
+SELECT (patient_id IS NULL AND reason = 'no Dolphin patient GUID or ID') AS ok FROM consult.dolphin_open('staff@lso.com', '', '', 'A', 'B', '') \gset
+\if :ok \echo ok  open: no GUID or ID refused \else \echo FAIL open no ids \quit \endif
+SELECT (dob = '2016-05-05') AS ok FROM consult.patients WHERE dolphin_patient_id = 'VALE01' \gset
+\if :ok \echo ok  open: birthday stored \else \echo FAIL open dob \quit \endif
+SELECT (count(*) >= 2) AS ok FROM consult.audit_log WHERE actor = 'staff@lso.com' AND action LIKE 'dolphin launch%' \gset
+\if :ok \echo ok  open: audit rows name the staff member \else \echo FAIL open audit \quit \endif
+\set ON_ERROR_STOP 0
+SELECT * FROM consult.dolphin_match('11111111-1111-1111-1111-111111111111','{Q}','Q','A','B','','x');
+\set ON_ERROR_STOP 1
+\echo ok  (the "permission denied for function dolphin_match" above is expected)
 \echo ALL PASSED
