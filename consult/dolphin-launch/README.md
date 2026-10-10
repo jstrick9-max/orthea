@@ -12,7 +12,7 @@ browser  …/consult#/launch/<code> ─▶ Budibase /launch ─▶ consult.redee
 |---|---|---|
 | 1 | Database: switch, keys, codes, launch + redeem functions | **built, tested** — `01_dolphin_launch.sql` |
 | 2 | n8n C04 "Consult - Dolphin Launch" webhook | **built** — `C04_Consult_-_Dolphin_Launch.json`, test with `fake-launch.ps1` |
-| 3 | Budibase `/launch/:t` screen | **steps below** — `02_redeem_repeat.sql`, `C · Redeem launch.sql` |
+| 3 | Budibase `/launch/:t` screen | **built, working** (sign-in test pending) — `02_redeem_repeat.sql`, `C · Redeem launch.sql` |
 | 4 | Launcher (PowerShell first) + `dolphin.ini` line | after `/launch` works |
 | 5 | Rollout at LSO, hide Add patient | after Dolphin's OK |
 
@@ -118,14 +118,19 @@ it would need a live code).
    1. **Update State** — Set `launchDone` = (blank)
    2. **Execute Query** — `C · Redeem launch`; `code` = `{{ url.t }}`, `email` = `{{ [user].[email] }}`
    3. **Update State** — Set `launchDone` = `yes`
-   4. **Continue if / Stop if** — Type **Continue if**; Value = the result of action 2 followed by
-      `.0.destination` (see below); Operator **Not equals**; Reference value blank
-   5. **Update State** — Set `selectedPatientId`, **Persist** on, Value = action 2's result + `.0.patient_id`
-   6. **Navigate To** — Screen, URL = action 2's result + `.0.destination`
+   4. **Continue if / Stop if** — Type **Continue if**; Value = JavaScript **A** with `destination`;
+      Operator **Not equals**; Reference value blank
+   5. **Update State** — Set `selectedPatientId`, **Persist** on, Value = JavaScript **A** with `patient_id`
+   6. **Navigate To** — Screen, URL = JavaScript **A** with `destination`
 
-   **Action 2's result:** in the value box open the bindings drawer; under the actions section
-   pick **Action 2 → Result**. It inserts a binding ending in `}}` — type `.0.destination`
-   (or `.0.patient_id`) just before the `}}`.
+   **JavaScript A** (⚡ → JavaScript). Budibase 3.37 names the earlier result
+   `Action 2.Query result` (lower-case r):
+   ```js
+   const r = $("Action 2.Query result");
+   const rows = Array.isArray(r) ? r : ((r && (r.data || r.rows)) || []);
+   return (rows[0] && rows[0].destination) || "";   // or rows[0].patient_id
+   ```
+   Tick **Do not display default notification** on action 2. Remove **Launch** from Navigation.
 
 Once 4–6 work, success never shows the screen for more than a moment: it moves straight on.
 
