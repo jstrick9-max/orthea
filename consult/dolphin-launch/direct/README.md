@@ -103,3 +103,9 @@ At LSO:
 4. Open **TESTER** → click **Orthea Consult** → Test Patient opens in Chrome.
 5. No patient open → click → Dolphin's chooser → TESTER → opens.
 6. **Undo** (rehearse it once): close Dolphin, delete `Dolphin.ini`, rename the backup back.
+
+## Status
+
+- 2026-10-10: line added on one LSO workstation; TESTER opens from Dolphin, incl. via Dolphin's
+  patient chooser and through the Budibase sign-in. Requires the patient-in-address change
+  (`../../budibase/patient-in-url.md`): `/dolphin` navigates to `destination + "/" + patient_id`.
