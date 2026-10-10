@@ -5,14 +5,14 @@ on that patient in Orthea Consult. Orthea never writes to Dolphin.
 
 ```
 Dolphin button ─▶ launcher on the PC ─HTTPS─▶ n8n C04 ─▶ consult.dolphin_launch()  → one-time code
-browser  …/consult#/launch?t=<code> ─▶ Budibase /launch ─▶ consult.redeem_launch() → /review or /intake
+browser  …/consult#/launch/<code> ─▶ Budibase /launch ─▶ consult.redeem_launch() → /review or /intake
 ```
 
 | Step | What | Status |
 |---|---|---|
 | 1 | Database: switch, keys, codes, launch + redeem functions | **built, tested** — `01_dolphin_launch.sql` |
 | 2 | n8n C04 "Consult - Dolphin Launch" webhook | **built** — `C04_Consult_-_Dolphin_Launch.json`, test with `fake-launch.ps1` |
-| 3 | Budibase `/launch` screen | after C04 |
+| 3 | Budibase `/launch/:t` screen | **steps below** — `02_redeem_repeat.sql`, `C · Redeem launch.sql` |
 | 4 | Launcher (PowerShell first) + `dolphin.ini` line | after `/launch` works |
 | 5 | Rollout at LSO, hide Add patient | after Dolphin's OK |
 
@@ -57,7 +57,7 @@ the launcher will open:
 POST https://listen.ortheasecurity.com/webhook/consult/dolphin/launch
 Header  X-Orthea-Key: <practice key>
 Body    {"guid":"{…}","dolphinId":"TESTER","firstName":"Test","lastName":"Patient","birthday":"07/15/1987"}
-→ 200 {"url":"…/consult#/launch?t=<code>","outcome":"created"}     or 403 {"error":"…"}
+→ 200 {"url":"…/consult#/launch/<code>","outcome":"created"}     or 403 {"error":"…"}
 ```
 
 Successful runs aren't saved in n8n's execution list (they carry patient names); failed runs are.
@@ -80,3 +80,60 @@ Successful runs aren't saved in n8n's execution list (they carry patient names);
    The link won't open a patient yet: `/launch` is step 3.
 5. Clean-up after testing: the fake patient is "Test Patient" (Dolphin ID TESTER); archive it
    from the patient list.
+
+## Step 3 — Budibase `/launch/:t`
+
+The link C04 returns is `…/consult#/launch/<code>`. The screen swaps the code for the patient
+(`consult.redeem_launch`), sets `selectedPatientId` like the patient list does, and goes to
+Review or Intake. A used or expired link shows a message instead.
+
+### A. Database (Beekeeper, admin connection, Auto Commit)
+
+Run `02_redeem_repeat.sql` (46 lines). It lets the same user re-open a code within 30 seconds,
+because Budibase can run on-load actions twice. Nobody else can ever reuse a code.
+
+### B. n8n C04 — link format
+
+**Send link** node → in the response body, change `'#/launch?t='` to `'#/launch/'`. Save
+(publish if asked).
+
+### C. Budibase query
+
+Data → **Consult DB** → **+ Create query** `C · Redeem launch`, Function **Read**.
+Parameters (default blank): `code`, `email`. Paste `C · Redeem launch.sql`. Save (don't Run:
+it would need a live code).
+
+### D. Screen
+
+1. Consult app → **+ Add screen** → **Blank screen**, route **`/launch/:t`**, same access role
+   as `/review`. Don't add it to the navigation.
+2. Add a **Container** `Launch Card` with:
+   - **Text** `Launch Opening`: `Opening the patient from Dolphin…`
+     Condition: **Hide** if `{{ [state].[launchDone] }}` equals `yes`.
+   - **Text** `Launch Failed`: `This Dolphin link has expired or was already used. Click Orthea Consult in Dolphin again, or open the patient from Patients.`
+     Condition: **Show** if `{{ [state].[launchDone] }}` equals `yes`.
+   - **Button** `Launch Patients` text `Go to Patients`, On click → Navigate To `/patients`.
+     Condition: **Show** if `{{ [state].[launchDone] }}` equals `yes`.
+3. Select the **screen** (top of the component tree) → **On screen load** → add, in order:
+   1. **Update State** — Set `launchDone` = (blank)
+   2. **Execute Query** — `C · Redeem launch`; `code` = `{{ url.t }}`, `email` = `{{ [user].[email] }}`
+   3. **Update State** — Set `launchDone` = `yes`
+   4. **Continue if / Stop if** — Type **Continue if**; Value = the result of action 2 followed by
+      `.0.destination` (see below); Operator **Not equals**; Reference value blank
+   5. **Update State** — Set `selectedPatientId`, **Persist** on, Value = action 2's result + `.0.patient_id`
+   6. **Navigate To** — Screen, URL = action 2's result + `.0.destination`
+
+   **Action 2's result:** in the value box open the bindings drawer; under the actions section
+   pick **Action 2 → Result**. It inserts a binding ending in `}}` — type `.0.destination`
+   (or `.0.patient_id`) just before the `}}`.
+
+Once 4–6 work, success never shows the screen for more than a moment: it moves straight on.
+
+### E. Test
+
+1. `fake-launch.ps1` → copy the link → open it in the browser where you're signed in to the
+   published app. Expect Test Patient's Intake (or Review if it has a consult).
+2. Open the same link again a minute later → the "expired or already used" message.
+3. Open a fresh link in a **private window** (signed out): sign in, and check whether you land on
+   the patient or on the home screen. Tell me which — it decides whether the sign-in step needs
+   handling before rollout.

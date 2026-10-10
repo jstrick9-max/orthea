@@ -35,8 +35,14 @@ SELECT (:'o' = 'created' AND length(:'c') = 64) AS ok \gset
 \if :ok \echo ok  new patient created, 64-char code \else \echo FAIL create :o \quit \endif
 SELECT (destination = '/intake' AND patient_name = 'Test Patient') AS ok FROM consult.redeem_launch(:'c','Staff@LSO.com ') \gset
 \if :ok \echo ok  redeem → /intake for a patient with no consult \else \echo FAIL redeem new \quit \endif
+SELECT count(*) = 1 AS ok FROM consult.redeem_launch(:'c','staff@lso.com') \gset
+\if :ok \echo ok  same user can repeat within 30 seconds (Budibase double load) \else \echo FAIL repeat \quit \endif
+RESET ROLE; SET ROLE orthea_admin;
+UPDATE consult.launch_codes SET used_at = now() - interval '31 seconds' WHERE used_at IS NOT NULL;
+INSERT INTO public.practice_users (email, practice_id, active) VALUES ('staff2@lso.com','11111111-1111-1111-1111-111111111111',true);
+RESET ROLE; SET ROLE consult_app;
 SELECT count(*) = 0 AS ok FROM consult.redeem_launch(:'c','staff@lso.com') \gset
-\if :ok \echo ok  code cannot be used twice \else \echo FAIL reuse \quit \endif
+\if :ok \echo ok  code cannot be used again after 30 seconds \else \echo FAIL reuse \quit \endif
 SELECT (dob = '1987-07-15' AND dolphin_guid = '{8DEB5881-00BC-4F30-8BCF-798E892B9602}') AS ok FROM consult.patients WHERE dolphin_patient_id='TESTER' \gset
 \if :ok \echo ok  birthday MM/DD/YYYY stored as a date, GUID stored with braces \else \echo FAIL stored values \quit \endif
 
@@ -75,6 +81,12 @@ SELECT (:'o' = 'created' AND (SELECT count(*) FROM consult.patients WHERE first_
 SELECT outcome AS o FROM consult.dolphin_launch(:'key_a','{EEEEEEEE-0000-0000-0000-000000000005}','BAD01','Bo','Day','02/31/2015') \gset
 SELECT (SELECT dob IS NULL FROM consult.patients WHERE dolphin_patient_id='BAD01') AS ok \gset
 \if :ok \echo ok  impossible date 02/31/2015 not stored \else \echo FAIL bad date \quit \endif
+
+-- 10b. a used code is not available to a colleague either
+SELECT code AS c2 FROM consult.dolphin_launch(:'key_a','{8DEB5881-00BC-4F30-8BCF-798E892B9602}','TESTER','Test','Patient','07/15/1987') \gset
+SELECT count(*) = 1 AS ok FROM consult.redeem_launch(:'c2','staff@lso.com') \gset
+SELECT count(*) = 0 AS ok2 FROM consult.redeem_launch(:'c2','staff2@lso.com') \gset
+\if :ok2 \echo ok  a used code cannot be taken by a colleague \else \echo FAIL colleague \quit \endif
 
 -- 11. redeem: other practice, inactive user, expired
 SELECT code AS c FROM consult.dolphin_launch(:'key_a','{8DEB5881-00BC-4F30-8BCF-798E892B9602}','TESTER','Test','Patient','07/15/1987') \gset

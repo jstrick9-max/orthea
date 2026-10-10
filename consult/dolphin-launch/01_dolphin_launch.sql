@@ -197,7 +197,8 @@ $$;
 
 -- ---------------------------------------------------------------- redeem (called by Budibase /launch)
 --
--- Swaps a code for the patient, once, for a signed-in user of the same practice.
+-- Swaps a code for the patient, once, for a signed-in user of the same practice
+-- (the same user may repeat it within 30 seconds).
 -- destination follows the patient list: /review when the patient has a consult, else /intake.
 -- No row = code unknown, used, expired, or for another practice.
 
@@ -209,10 +210,13 @@ AS $$
 DECLARE
   v_patient bigint;
 BEGIN
+  -- Single use. The same user may open it again within 30 seconds, because Budibase can
+  -- run a screen's on-load actions twice; nobody else ever can.
   UPDATE consult.launch_codes lc
-     SET used_at = now(), used_by = lower(btrim(p_email))
+     SET used_at = COALESCE(lc.used_at, now()), used_by = lower(btrim(p_email))
    WHERE lc.code_hash = consult.launch_hash(btrim(COALESCE(p_code, '')))
-     AND lc.used_at IS NULL
+     AND (lc.used_at IS NULL
+          OR (lc.used_by = lower(btrim(p_email)) AND lc.used_at > now() - interval '30 seconds'))
      AND lc.expires_at > now()
      AND lc.practice_id IN (SELECT pu.practice_id FROM public.practice_users pu
                              WHERE lower(pu.email) = lower(btrim(p_email)) AND pu.active)

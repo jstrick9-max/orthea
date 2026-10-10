@@ -140,7 +140,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { url: $('Settings').first().json.consultUrl.replace(/\\/+$/, '') + '#/launch?t=' + $json.code, outcome: $json.outcome } }}",
+        "responseBody": "={{ { url: $('Settings').first().json.consultUrl.replace(/\\/+$/, '') + '#/launch/' + $json.code, outcome: $json.outcome } }}",
         "options": {
           "responseHeaders": {
             "entries": [
