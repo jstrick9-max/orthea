@@ -42,15 +42,28 @@ default blank: `email`, `guid`, `dolphinId`, `firstName`, `lastName`, `birthday`
 3. **On screen load** — final order:
    1. Update State — `launchDone` = (blank)
    2. Execute Query — **`C · Dolphin open`**, **Do not display default notification** ticked.
-      Bindings (Text, not JavaScript): `email` = `{{ [user].[email] }}`, `guid` = `{{ url.g }}`,
-      `dolphinId` = `{{ url.i }}`, `firstName` = `{{ url.f }}`, `lastName` = `{{ url.l }}`,
-      `birthday` = `{{ url.b }}`. (Budibase puts the `?g=…&i=…` values from the address into `url`.
-      `window.location` does **not** work: JavaScript bindings run in a sandboxed frame.)
+      Bindings: `email` = `{{ [user].[email] }}` (Text); the other five are **JavaScript B** with
+      their letter: `guid` → `g`, `dolphinId` → `i`, `firstName` → `f`, `lastName` → `l`,
+      `birthday` → `b`.
    3. Update State — `launchReason` = JavaScript A with `reason`
    4. Update State — `launchDone` = `yes`
    5. Continue if — JavaScript A with `destination`, **Not equals**, reference blank
    6. Update State — `selectedPatientId`, Persist on, JavaScript A with `patient_id`
    7. Navigate To — Screen, URL = JavaScript A with `destination`
+
+**JavaScript B** — reads one value from the address. Budibase runs JavaScript bindings in a
+frame, and `{{ url.g }}` does not include `?` values, so it asks the top page for the address:
+```js
+let h = "";
+try { h = window.top.location.hash || ""; } catch (e) {}
+if (!h) { try { h = window.parent.location.hash || ""; } catch (e) {} }
+if (!h) { try { h = window.location.hash || ""; } catch (e) {} }
+const i = h.indexOf("?");
+return new URLSearchParams(i >= 0 ? h.slice(i + 1) : "").get("g") || "";
+```
+
+> **Keep every Default blank on `C · Dolphin open`.** Budibase uses a default whenever a binding is
+> empty — test values left there make every click open that test patient.
 
 **JavaScript A** — use the internal name `actions.1.result` (= action 2's result; the query
 returns `{"data":[…]}`):
@@ -68,7 +81,8 @@ Paste this into Chrome's address bar (signed in to the published app):
 ```
 https://orthea-budibase.eqawdd.easypanel.host/app/default%20workspace/consult#/dolphin?g={8DEB5881-00BC-4F30-8BCF-798E892B9602}&i=TESTER&f=Test&l=Patient&b=07/15/1987
 ```
-Expect Test Patient's Intake. **Passed 2026-10-10.** Also try `b=` empty, and a made-up patient (new GUID and ID) to see a
+Expect Test Patient's Intake. Passed 2026-10-10, incl. a new patient "Mary Ann Rehearsal" (space
+in the name arrives intact). Also try `b=` empty, and a made-up patient (new GUID and ID) to see a
 new patient created — archive it afterwards.
 
 ## 5. The `dolphin.ini` line (one workstation at LSO)
