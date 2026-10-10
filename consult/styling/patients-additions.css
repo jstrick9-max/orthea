@@ -1,0 +1,18 @@
+<style>
+/* ===== Orthea Consult: Patients page additions (paste at the END of New Embed on /patients) ===== */
+
+/* Budibase footer badge */
+.free-footer { display: none !important; }
+
+/* Breathing room: left of DOB, right of Referring dentist */
+[data-name="List Header Row"] > div { grid-template-columns: 110px 1.4fr 124px 1.3fr 134px 90px !important; }
+[data-name="Row Main"] > div         { grid-template-columns: 110px 1.4fr 124px 1.3fr 134px !important; }
+[data-name="Col DOB"], [data-name="Row DOB"]             { padding-left: 24px !important; }
+[data-name="Col Referring"], [data-name="Row Referring"] { padding-right: 24px !important; }
+[data-name="Row Referring"] p {
+  overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important;
+}
+
+/* Nav column: a hairline so it separates from the page when both are cream */
+.nav-wrapper .nav--left { border-right: 1px solid #E8E1D7 !important; }
+</style>
