@@ -21,6 +21,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Dolphin passes each value as "=<value>" so a blank value is still an argument (Windows
+# PowerShell drops empty "" arguments). Remove that leading "=" here.
+function Get-Value([string]$v) { if ($v.StartsWith('=')) { $v.Substring(1) } else { $v } }
+$Guid      = Get-Value $Guid
+$DolphinId = Get-Value $DolphinId
+$FirstName = Get-Value $FirstName
+$LastName  = Get-Value $LastName
+$Birthday  = Get-Value $Birthday
+
 $Endpoint   = 'https://listen.ortheasecurity.com/webhook/consult/dolphin/launch'
 $AllowedUrl = 'https://orthea-budibase.eqawdd.easypanel.host/'   # only links to Orthea are opened
 $KeyFile    = Join-Path $env:ProgramData 'Orthea\launch.key'

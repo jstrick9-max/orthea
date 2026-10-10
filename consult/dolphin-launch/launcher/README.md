@@ -13,7 +13,8 @@ A small PowerShell script that sits on each LSO workstation. Dolphin runs it whe
 
 ## What happens on a click
 
-1. Dolphin fills in `{PatientGUID} {PatientID} {PatientFirstName} {PatientLastName} {PatientBirthday}`
+1. Dolphin fills in each value after a `=` (so a blank value is still passed; the launcher strips it):
+   `{PatientGUID} {PatientID} {PatientFirstName} {PatientLastName} {PatientBirthday}`
    and starts Windows PowerShell (built into Windows) with the launcher. If no patient is open,
    Dolphin shows its own patient chooser first.
 2. The launcher checks it got a GUID or ID, reads the key file, and sends the five values plus the
@@ -52,7 +53,7 @@ Windows run is the rehearsal below.
 **0. Rehearse on your own PC (no Dolphin needed).**
 Run the installer, then run the launcher by hand the way Dolphin would:
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Program Files\Orthea\OrtheaLaunch.ps1" -Guid "{8DEB5881-00BC-4F30-8BCF-798E892B9602}" -DolphinId "TESTER" -FirstName "Test" -LastName "Patient" -Birthday "07/15/1987"
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Program Files\Orthea\OrtheaLaunch.ps1" -Guid "={8DEB5881-00BC-4F30-8BCF-798E892B9602}" -DolphinId "=TESTER" -FirstName "=Test" -LastName "=Patient" -Birthday "=07/15/1987"
 ```
 Expect Test Patient to open. Then run the uninstaller, so you've practised the undo too.
 

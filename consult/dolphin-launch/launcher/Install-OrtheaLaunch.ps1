@@ -38,7 +38,7 @@ Set-Content -Path $KeyFile -Value $Key -Encoding ASCII -NoNewline
 $Ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $Line = 'OrtheaConsult=Orthea Consult,Open this patient in Orthea Consult,' + (Join-Path $App 'orthea.bmp') + ',' +
         $Ps + ' -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + (Join-Path $App 'OrtheaLaunch.ps1') + '"' +
-        ' -Guid "{PatientGUID}" -DolphinId "{PatientID}" -FirstName "{PatientFirstName}" -LastName "{PatientLastName}" -Birthday "{PatientBirthday}"'
+        ' -Guid "={PatientGUID}" -DolphinId "={PatientID}" -FirstName "={PatientFirstName}" -LastName "={PatientLastName}" -Birthday "={PatientBirthday}"'
 
 Write-Host ''
 Write-Host 'Installed. Nothing in Dolphin has changed yet.' -ForegroundColor Green

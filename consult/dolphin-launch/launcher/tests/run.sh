@@ -18,7 +18,7 @@ tail -1 "$T/requests.jsonl" | grep -qF '"key": "olk_good"' && echo "ok   key sen
 o=$(ORTHEA_LAUNCH_KEYFILE=$T/bad.key "$PWSH" -NoProfile -File "$L" -Guid '{X}' -DolphinId X -FirstName A -LastName B 2>&1; echo "exit=$?")
 check "refused key -> admin message" "$o" "did not accept this computer's key"
 check "refused key exits 1, opens nothing" "$o" "exit=1"
-o=$(ORTHEA_LAUNCH_KEYFILE=$T/good.key "$PWSH" -NoProfile -File "$L" -Guid '' -DolphinId '  ' 2>&1)
+o=$(ORTHEA_LAUNCH_KEYFILE=$T/good.key "$PWSH" -NoProfile -File "$L" -Guid '=' -DolphinId '=' -FirstName '=' -LastName '=' -Birthday '=' 2>&1)
 check "no patient -> message, nothing sent" "$o" "Dolphin did not send a patient"
 o=$(ORTHEA_LAUNCH_KEYFILE=$T/missing.key "$PWSH" -NoProfile -File "$L" -Guid '{X}' -DolphinId X 2>&1)
 check "no key file -> setup message" "$o" "not set up on this computer"
@@ -27,6 +27,9 @@ check "server error -> try again message" "$o" "(error 500)"
 o=$(ORTHEA_LAUNCH_KEYFILE=$T/good.key "$PWSH" -NoProfile -File "$L" -Guid '{X}' -DolphinId EVIL -FirstName A -LastName B 2>&1)
 check "link to another site is not opened" "$o" "unexpected reply"
 echo "$o" | grep -q "OPEN:" && { echo "FAIL evil link opened"; fail=1; }
+o=$(ORTHEA_LAUNCH_KEYFILE=$T/good.key "$PWSH" -NoProfile -File "$L" -Guid '={8DEB}' -DolphinId '=TESTER' -FirstName '=Test' -LastName '=Patient' -Birthday '=' 2>&1)
+check "= prefix stripped, blank birthday OK" "$o" "OPEN: "
+tail -1 "$T/requests.jsonl" | python3 -I -c "import json,sys; b=json.load(sys.stdin)['body']; sys.exit(0 if (b['guid'],b['dolphinId'],b['birthday'])==('{8DEB}','TESTER','') else 1)" && echo "ok   values arrive without the = prefix" || { echo "FAIL prefix: $(tail -1 $T/requests.jsonl)"; fail=1; }
 o=$(ORTHEA_LAUNCH_KEYFILE=$T/good.key "$PWSH" -NoProfile -File "$L" -Guid '{X}' -DolphinId TEXT -FirstName A -LastName B 2>&1)
 check "reply sent as plain text still opens" "$o" "OPEN: https://orthea-budibase.eqawdd.easypanel.host/app/x/consult#/launch/t1"
 kill $MOCK; sleep 0.5
