@@ -45,8 +45,8 @@ that only a signed-in LSO user can open. It can be revoked any time
 Good key opens the link · names with `'`, `&` and accents arrive intact · refused key, missing
 key file, no patient, server error and unreachable Orthea each show the right message and open
 nothing · a reply pointing at another site is refused · a plain-text reply still works · the log
-contains no names, IDs, key or link. Not yet run on Windows PowerShell 5.1 itself — the first
-Windows run is the rehearsal below.
+contains no names, IDs, key or link. Windows PowerShell 5.1 rehearsal on a Windows 11 PC passed
+(2026-10-10): install, launch, blank birthday, no-patient message, log.
 
 ## Testing at LSO — careful order
 

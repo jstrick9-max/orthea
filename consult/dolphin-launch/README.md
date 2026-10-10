@@ -13,7 +13,7 @@ browser  …/consult#/launch/<code> ─▶ Budibase /launch ─▶ consult.redee
 | 1 | Database: switch, keys, codes, launch + redeem functions | **built, tested** — `01_dolphin_launch.sql` |
 | 2 | n8n C04 "Consult - Dolphin Launch" webhook | **built** — `C04_Consult_-_Dolphin_Launch.json`, test with `fake-launch.ps1` |
 | 3 | Budibase `/launch/:t` screen | **built, working** (incl. sign-in) — `02_redeem_repeat.sql`, `C · Redeem launch.sql` |
-| 4 | Launcher (PowerShell first) + `dolphin.ini` line | **built, tested off Windows** — `launcher/` (see its README) |
+| 4 | Launcher (PowerShell first) + `dolphin.ini` line | **built; Windows rehearsal passed 2026-10-10** — `launcher/` (see its README) |
 | 5 | Rollout at LSO, hide Add patient | after Dolphin's OK |
 
 ## How a click is matched (step 1)
