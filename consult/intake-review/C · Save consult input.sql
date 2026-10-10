@@ -5,17 +5,17 @@
 -- row if nothing was saved.
 WITH target AS (
   SELECT c.id FROM consult.consults c
-   WHERE c.patient_id = CASE WHEN trim({{ patientId }}) ~ '^[0-9]+$'
-                             THEN trim({{ patientId }})::bigint END
+   WHERE c.patient_id = CASE WHEN trim({{ patientId }}::text) ~ '^[0-9]+$'
+                             THEN trim({{ patientId }}::text)::bigint END
      AND c.practice_id IN (
            SELECT pu.practice_id FROM public.practice_users pu
-            WHERE lower(pu.email) = lower({{ email }}) AND pu.active
+            WHERE lower(pu.email) = lower({{ email }}::text) AND pu.active
          )
    ORDER BY c.created_at DESC
    LIMIT 1
 ), inp AS (
-  SELECT NULLIF(NULLIF(trim(replace({{ transcript }}, '\n', E'\n')), ''), '``') AS transcript,
-         NULLIF(NULLIF(trim(replace({{ tmtNotes }},   '\n', E'\n')), ''), '``') AS tmt_notes
+  SELECT NULLIF(NULLIF(trim(replace({{ transcript }}::text, '\n', E'\n')), ''), '``') AS transcript,
+         NULLIF(NULLIF(trim(replace({{ tmtNotes }}::text,   '\n', E'\n')), ''), '``') AS tmt_notes
 ), upd AS (
   UPDATE consult.consults c
      SET transcript = COALESCE(inp.transcript, c.transcript),
@@ -28,6 +28,6 @@ WITH target AS (
   RETURNING c.id
 ), logged AS (
   INSERT INTO consult.audit_log (consult_id, action, actor)
-  SELECT id::text, 'added consult input', lower({{ email }}) FROM upd
+  SELECT id::text, 'added consult input', lower({{ email }}::text) FROM upd
 )
 SELECT id FROM upd;
