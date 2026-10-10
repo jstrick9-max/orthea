@@ -1,7 +1,7 @@
 -- Budibase query "C · Consult review" (Consult DB) — replace the whole SQL. Parameters unchanged.
 -- Change (2026-10-10): adds two columns —
---   needs_input  = 'yes' while the consult is a draft with no transcript and no TMT notes
---   from_dolphin = 'yes' when the patient is linked to Dolphin
+--   needs_input  = "yes" while the consult is a draft with no transcript and no TMT notes
+--   from_dolphin = "yes" when the patient is linked to Dolphin
 -- (family_intro_view / family_rest_view split for the composite photo is unchanged.)
 SELECT q.*,
        fmt.doctor_v AS doctor_letter_view,

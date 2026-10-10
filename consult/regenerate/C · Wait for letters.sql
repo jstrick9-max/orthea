@@ -1,6 +1,6 @@
 -- New Budibase query "C · Wait for letters" (Consult DB, verb: Read).
 -- Parameters: patientId, email (same defaults as C · Consult review).
--- Waits up to 12 s for the patient's latest consult to leave 'generating'.
+-- Waits up to 12 s for the patient’s latest consult to leave "generating".
 SELECT consult.wait_for_generation(t.id, 12) AS status
 FROM (
   SELECT c.id FROM consult.consults c

@@ -1,12 +1,12 @@
 -- NEW Budibase query "C · Save letter details" (Consult DB, Function: Update)
 -- Parameters (all default blank): patientId, email, parent1First, parent1Last, parent2First,
 --   parent2Last, mailingAddress, refId, origRefId, refAddress, feeTotal, feeInitial, feeMonthly, feeMonths
--- Names/addresses: blank = keep what's on file. Addresses keep their line breaks (Budibase
+-- Names/addresses: blank = keep what’s on file. Addresses keep their line breaks (Budibase
 --   sends them as a literal \n, turned back into real newlines here).  Fees: blank = clear (letter drops Fees).
 -- Referrer: refId re-links the patient. refAddress belongs to the dentist the form loaded with
 --   (origRefId), so it is saved only when the dentist was not changed, or when the patient had
 --   no dentist before (then it goes to the newly picked one).
--- Only saves while the latest consult is in 'review'.
+-- Only saves while the latest consult is in "review".
 WITH me AS (
   SELECT pu.practice_id FROM public.practice_users pu
   WHERE lower(pu.email) = lower({{ email }}) AND pu.active

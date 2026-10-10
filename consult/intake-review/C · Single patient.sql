@@ -2,7 +2,7 @@
 -- (rowId, email). After saving, click Run once so Budibase picks up the new columns.
 -- Changes (2026-10-10):
 --   * parent_name_missing is true only when NO parent first name is on file (Parent 2 is optional)
---   * from_dolphin = 'yes' when the patient came from / is linked to Dolphin
+--   * from_dolphin = "yes" when the patient came from / is linked to Dolphin
 SELECT p.id,
        p.dolphin_patient_id,
        p.first_name,

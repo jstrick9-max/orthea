@@ -1,11 +1,11 @@
 -- NEW Budibase query "C · Save composite" (Consult DB, Function: Update)
 -- Parameters (all default blank): patientId, email, compositeUrl, removeComposite
--- compositeUrl    = the Letter Details form's Composite photo field: {{ form.compositeImage.url }}
--- removeComposite = the "Remove photo" checkbox ('true' to remove)
+-- compositeUrl    = the Letter Details form’s Composite photo field: form.compositeImage.url
+-- removeComposite = the "Remove photo" checkbox ("true" to remove)
 -- A new photo is saved only when it differs from the current one; the stored image is cleared
 -- and n8n (C03 Consult - Fetch Composite) is notified to fetch the new file. Letters are
--- not regenerated — the photo is placed into the family letter when it's shown/downloaded.
--- Only while the latest consult is in 'review'.
+-- not regenerated — the photo is placed into the family letter when it’s shown/downloaded.
+-- Only while the latest consult is in "review".
 WITH target AS (
   SELECT c.id FROM consult.consults c
    WHERE c.patient_id = CASE WHEN trim({{ patientId }}) ~ '^[0-9]+$'

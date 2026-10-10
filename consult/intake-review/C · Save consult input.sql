@@ -1,6 +1,6 @@
 -- NEW Budibase query "C · Save consult input" (Consult DB, Function: Update).
 -- Parameters (Default: leave blank): patientId, email, transcript, tmtNotes
--- Fills in the transcript and/or TMT notes on the patient's latest consult while it is still a
+-- Fills in the transcript and/or TMT notes on the patient’s latest consult while it is still a
 -- draft (saved without input). Blank fields are left as they are. Returns the consult id, or no
 -- row if nothing was saved.
 WITH target AS (

@@ -3,8 +3,8 @@
 --   mailingAddress, refAddress, email, refId, newRefName, newRefFirst, newRefPractice, newRefEmail
 --   (the last five are new — add them).
 -- A blank field means "leave as is", so saving Intake never wipes something already on file.
--- refId: a referring dentist's id from "C · Referring doctors" sets the patient's dentist;
---        '__new' with newRefName creates that dentist (with refAddress) and sets it.
+-- refId: a referring dentist’s id from “C · Referring doctors” sets the patient’s dentist;
+--        "__new" with newRefName creates that dentist (with refAddress) and sets it.
 WITH me AS (
   SELECT pu.practice_id FROM public.practice_users pu
   WHERE lower(pu.email) = lower({{ email }}::text) AND pu.active

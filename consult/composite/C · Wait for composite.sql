@@ -1,6 +1,6 @@
 -- NEW Budibase query "C · Wait for composite" (Consult DB, Function: Read)
 -- Parameters: patientId (default 1), email (default lso@ortheasecurity.com)
--- Waits up to 12 s for the new photo to be fetched. Returns 'ready', 'none' or 'loading'.
+-- Waits up to 12 s for the new photo to be fetched. Returns "ready", "none" or "loading".
 SELECT consult.wait_for_composite(t.id, 12) AS composite
 FROM (
   SELECT c.id FROM consult.consults c
