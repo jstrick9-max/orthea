@@ -39,28 +39,25 @@ default blank: `email`, `guid`, `dolphinId`, `firstName`, `lastName`, `birthday`
    **`/dolphin`** (no `:t`). Keep it out of Navigation.
 2. Change **Launch Failed** text to:
    `Orthea couldn't open this patient from Dolphin: {{ [state].[launchReason] }}. Open the patient from Patients instead.`
-3. **On screen load** — change only these:
-   - **Action 2 (Execute Query)** → query **`C · Dolphin open`**, tick **Do not display default
-     notification**. Bindings: `email` = `{{ [user].[email] }}`; the other five each use
-     **JavaScript B** with its letter: `guid` → `g`, `dolphinId` → `i`, `firstName` → `f`,
-     `lastName` → `l`, `birthday` → `b`.
-   - **Add** an **Update State** right after action 2: Set `launchReason`, Value = JavaScript A with
-     `reason` (see below). Drag it to position 3.
-   - Actions *Continue if*, *Update State selectedPatientId*, *Navigate To* stay as they are
-     (JavaScript A reads `Action 2.Query result` — still the right action).
+3. **On screen load** — final order:
+   1. Update State — `launchDone` = (blank)
+   2. Execute Query — **`C · Dolphin open`**, **Do not display default notification** ticked.
+      Bindings (Text, not JavaScript): `email` = `{{ [user].[email] }}`, `guid` = `{{ url.g }}`,
+      `dolphinId` = `{{ url.i }}`, `firstName` = `{{ url.f }}`, `lastName` = `{{ url.l }}`,
+      `birthday` = `{{ url.b }}`. (Budibase puts the `?g=…&i=…` values from the address into `url`.
+      `window.location` does **not** work: JavaScript bindings run in a sandboxed frame.)
+   3. Update State — `launchReason` = JavaScript A with `reason`
+   4. Update State — `launchDone` = `yes`
+   5. Continue if — JavaScript A with `destination`, **Not equals**, reference blank
+   6. Update State — `selectedPatientId`, Persist on, JavaScript A with `patient_id`
+   7. Navigate To — Screen, URL = JavaScript A with `destination`
 
-**JavaScript A** (already on the copied actions):
+**JavaScript A** — use the internal name `actions.1.result` (= action 2's result; the query
+returns `{"data":[…]}`):
 ```js
-const r = $("Action 2.Query result");
+const r = $("actions.1.result");
 const rows = Array.isArray(r) ? r : ((r && (r.data || r.rows)) || []);
 return (rows[0] && rows[0].destination) || "";   // patient_id / reason for the others
-```
-
-**JavaScript B** — reads one value from the address (change `"g"` to the letter):
-```js
-const h = window.location.hash || "";
-const i = h.indexOf("?");
-return new URLSearchParams(i >= 0 ? h.slice(i + 1) : "").get("g") || "";
 ```
 
 Publish.
@@ -71,7 +68,7 @@ Paste this into Chrome's address bar (signed in to the published app):
 ```
 https://orthea-budibase.eqawdd.easypanel.host/app/default%20workspace/consult#/dolphin?g={8DEB5881-00BC-4F30-8BCF-798E892B9602}&i=TESTER&f=Test&l=Patient&b=07/15/1987
 ```
-Expect Test Patient's Intake. Also try `b=` empty, and a made-up patient (new GUID and ID) to see a
+Expect Test Patient's Intake. **Passed 2026-10-10.** Also try `b=` empty, and a made-up patient (new GUID and ID) to see a
 new patient created — archive it afterwards.
 
 ## 5. The `dolphin.ini` line (one workstation at LSO)
