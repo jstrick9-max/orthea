@@ -109,3 +109,19 @@ At LSO:
 - 2026-10-10: line added on one LSO workstation; TESTER opens from Dolphin, incl. via Dolphin's
   patient chooser and through the Budibase sign-in. Requires the patient-in-address change
   (`../../budibase/patient-in-url.md`): `/dolphin` navigates to `destination + "/" + patient_id`.
+
+## Dolphin tokens — what Management 11.4 gives a toolbar button (tested at LSO)
+
+Work: `{PatientGUID}` `{PatientID}` `{PatientFirstName}` `{PatientLastName}` `{PatientBirthday}`
+`{PatientBirthdate}` `{PatientGender}` (EasyRx also uses `{NextAppt…}`).
+
+Blank (unknown, or not offered in Management): email, phone, doctor, referrer, responsible party /
+parents, and every address name tried — `{PatientAddress}` `{PatientAddress1}` `{PatientAddress2}`
+`{PatientStreet}` `{PatientStreet1}` `{PatientCity}` `{PatientState}` `{PatientZip}`
+`{PatientZipCode}` `{PatientPostalCode}` `{Address1}` `{Street}` `{City}` `{Zip}` `{PatientAddr1}`
+`{PatientAddressLine1}` `{HomeAddress}` `{ResponsiblePartyFirstName}` `{ResponsiblePartyLastName}`
+`{RPFirstName}` `{RPLastName}` `{GuarantorName}` `{ResponsibleParty1Name}` — with `{PatientID}` filled
+in the same test (2026-10-10), so the patient context was fine.
+
+The family mailing address stays a staff field (Letter Details / Intake) unless Dolphin documents
+an address token.
