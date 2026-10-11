@@ -1,0 +1,285 @@
+{
+  "name": "E01 Inbox - Receive",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "format": "resolved",
+        "dataPropertyAttachmentsPrefixName": "attachment_",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4f303e12-345f-6390-3645-0c58c9cc6f5d",
+      "name": "New email",
+      "credentials": {
+        "imap": {
+          "id": "",
+          "name": "IMAP – LSO Inbox"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- AWS Signature V4 (shared by every Inbox Code node that calls AWS) ----\nconst crypto = require('crypto');\nconst AWS_REGION = 'us-east-2';\nconst BUCKET = $env.INBOX_BUCKET || 'orthea-inbox';\nconst awsEncode = s => encodeURIComponent(s).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());\nconst s3Path = key => '/' + String(key).split('/').map(awsEncode).join('/');\nfunction awsSign({ method, host, path, query = '', headers = {}, payloadHash, service, region = AWS_REGION,\n                   key = $env.INBOX_AWS_KEY, secret = $env.INBOX_AWS_SECRET, amzDate }) {\n  if (!key || !secret) throw new Error('INBOX_AWS_KEY / INBOX_AWS_SECRET are not set on the n8n server');\n  const NL = String.fromCharCode(10);\n  amzDate = amzDate || new Date().toISOString().replace(/[:-]|\\.\\d{3}/g, '');\n  const dateStamp = amzDate.slice(0, 8);\n  const h = { host, 'x-amz-date': amzDate };\n  for (const [k, v] of Object.entries(headers)) h[k.toLowerCase()] = String(v).trim();\n  const names = Object.keys(h).sort();\n  const canonicalHeaders = names.map(n => n + ':' + h[n] + NL).join('');\n  const signedHeaders = names.join(';');\n  const sha = d => crypto.createHash('sha256').update(d, 'utf8').digest('hex');\n  const hmac = (k, d) => crypto.createHmac('sha256', k).update(d, 'utf8').digest();\n  const canonicalRequest = [method, path, query, canonicalHeaders, signedHeaders, payloadHash].join(NL);\n  const scope = `${dateStamp}/${region}/${service}/aws4_request`;\n  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha(canonicalRequest)].join(NL);\n  const kSigning = hmac(hmac(hmac(hmac('AWS4' + secret, dateStamp), region), service), 'aws4_request');\n  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign, 'utf8').digest('hex');\n  const out = { ...h };\n  delete out.host;\n  out.authorization = `AWS4-HMAC-SHA256 Credential=${key}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;\n  return { url: `https://${host}${path}${query ? '?' + query : ''}`, headers: out, signature };\n}\nconst sha256hex = d => crypto.createHash('sha256').update(d, 'utf8').digest('hex');\n// ---- end AWS Signature V4 ----\n\n// E01 · Parse email — one item per email: who sent it, to which address, the text, and\n// a list of attachments with the S3 key each will be stored under.\nconst AUDIO = /\\.(m4a|mp3|mp4|wav|flac|ogg|oga|opus|amr|webm|caf|aac|3gp)$/i;\nconst IMAGE = /\\.(jpe?g|png|heic|heif|gif|webp|tiff?)$/i;\nconst addrList = v => {\n  if (!v) return [];\n  if (Array.isArray(v)) return v.flatMap(addrList);\n  if (typeof v === 'object' && Array.isArray(v.value)) return v.value.map(a => ({ address: String(a.address || '').toLowerCase(), name: a.name || '' }));\n  if (typeof v === 'object' && v.address) return [{ address: String(v.address).toLowerCase(), name: v.name || '' }];\n  return String(v).split(/[,;]/).map(s => {\n    const m = s.match(/^\\s*\"?([^\"<]*?)\"?\\s*<([^>]+)>\\s*$/);\n    return m ? { address: m[2].trim().toLowerCase(), name: m[1].trim() } : { address: s.trim().toLowerCase(), name: '' };\n  }).filter(a => a.address);\n};\nconst safeName = n => String(n || 'file').normalize('NFKD').replace(/[^\\w.\\-]+/g, '_').slice(-80) || 'file';\n\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const from = addrList(j.from)[0] || { address: '', name: '' };\n  const to = [...addrList(j.to), ...addrList(j.cc), ...addrList(j.deliveredTo || j['delivered-to'])];\n  const messageId = String(j.messageId || j['message-id'] || '').trim();\n  const idHash = crypto.createHash('sha1').update(messageId || JSON.stringify([from.address, j.subject, j.date])).digest('hex').slice(0, 16);\n  const box = (to.find(a => /\\.inbox@/.test(a.address)) || to[0] || { address: 'unknown' }).address.split('@')[0];\n  const attachments = [];\n  const binary = {};\n  let n = 0;\n  for (const [prop, bin] of Object.entries(item.binary || {})) {\n    n += 1;\n    const name = bin.fileName || `${prop}.${bin.fileExtension || 'bin'}`;\n    const mime = bin.mimeType || '';\n    const kind = mime.startsWith('audio/') || AUDIO.test(name) ? 'audio'\n               : mime.startsWith('image/') || IMAGE.test(name) ? 'image' : 'file';\n    const key = `${box}/${idHash}/${n}-${safeName(name)}`;\n    attachments.push({ kind, name, mime, size: bin.fileSize || null, key, prop: `file${n}` });\n    binary[`file${n}`] = bin;\n  }\n  let text = String(j.text || j.textPlain || '').replace(/\\r\\n/g, '\\n').trim();\n  if (text.length > 20000) text = text.slice(0, 20000);\n  out.push({\n    json: {\n      messageId,\n      to: to.map(a => a.address).join(', '),\n      fromEmail: from.address,\n      fromName: from.name,\n      subject: String(j.subject || '').slice(0, 300),\n      text,\n      attachments\n    },\n    binary\n  });\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "0972cca7-77ce-447a-1415-91ef1b9b9975",
+      "name": "Parse email"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.*, $2::text AS message_id\nFROM inbox.receive($1, $2, $3, $4, $5, $6, $7::jsonb) r;",
+        "options": {
+          "queryReplacement": "={{ [$json.to, $json.messageId, $json.fromEmail, $json.fromName, $json.subject, $json.text, JSON.stringify($json.attachments.map(a => ({ kind: a.kind, name: a.name, mime: a.mime, size: a.size, key: a.key })))] }}",
+          "queryBatching": "independently"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "id": "5639d3df-5aea-3d9e-7802-7b843ee3cbb2",
+      "name": "Receive",
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres – Inbox (inbox_app)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- AWS Signature V4 (shared by every Inbox Code node that calls AWS) ----\nconst crypto = require('crypto');\nconst AWS_REGION = 'us-east-2';\nconst BUCKET = $env.INBOX_BUCKET || 'orthea-inbox';\nconst awsEncode = s => encodeURIComponent(s).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());\nconst s3Path = key => '/' + String(key).split('/').map(awsEncode).join('/');\nfunction awsSign({ method, host, path, query = '', headers = {}, payloadHash, service, region = AWS_REGION,\n                   key = $env.INBOX_AWS_KEY, secret = $env.INBOX_AWS_SECRET, amzDate }) {\n  if (!key || !secret) throw new Error('INBOX_AWS_KEY / INBOX_AWS_SECRET are not set on the n8n server');\n  const NL = String.fromCharCode(10);\n  amzDate = amzDate || new Date().toISOString().replace(/[:-]|\\.\\d{3}/g, '');\n  const dateStamp = amzDate.slice(0, 8);\n  const h = { host, 'x-amz-date': amzDate };\n  for (const [k, v] of Object.entries(headers)) h[k.toLowerCase()] = String(v).trim();\n  const names = Object.keys(h).sort();\n  const canonicalHeaders = names.map(n => n + ':' + h[n] + NL).join('');\n  const signedHeaders = names.join(';');\n  const sha = d => crypto.createHash('sha256').update(d, 'utf8').digest('hex');\n  const hmac = (k, d) => crypto.createHmac('sha256', k).update(d, 'utf8').digest();\n  const canonicalRequest = [method, path, query, canonicalHeaders, signedHeaders, payloadHash].join(NL);\n  const scope = `${dateStamp}/${region}/${service}/aws4_request`;\n  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha(canonicalRequest)].join(NL);\n  const kSigning = hmac(hmac(hmac(hmac('AWS4' + secret, dateStamp), region), service), 'aws4_request');\n  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign, 'utf8').digest('hex');\n  const out = { ...h };\n  delete out.host;\n  out.authorization = `AWS4-HMAC-SHA256 Credential=${key}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;\n  return { url: `https://${host}${path}${query ? '?' + query : ''}`, headers: out, signature };\n}\nconst sha256hex = d => crypto.createHash('sha256').update(d, 'utf8').digest('hex');\n// ---- end AWS Signature V4 ----\n\n// E01 · Plan uploads — one item per attachment of each newly stored (not held, not duplicate)\n// message, signed for S3. A message without attachments gives one \"nothing to upload\" item.\nconst parsed = $('Parse email').all();\nconst out = [];\nfor (const r of $input.all()) {\n  const res = r.json;\n  if (!res.item_id || res.status !== 'processing' || res.duplicate === true || res.duplicate === 't') continue;\n  const src = parsed.find(p => p.json.messageId === res.message_id) || parsed[0];\n  const atts = src.json.attachments || [];\n  if (!atts.length) { out.push({ json: { itemId: res.item_id, upload: false } }); continue; }\n  for (const a of atts) {\n    const host = `${BUCKET}.s3.${AWS_REGION}.amazonaws.com`;\n    const s = awsSign({\n      method: 'PUT', host, path: s3Path(a.key), service: 's3', payloadHash: 'UNSIGNED-PAYLOAD',\n      headers: { 'x-amz-content-sha256': 'UNSIGNED-PAYLOAD', 'x-amz-server-side-encryption': 'AES256' }\n    });\n    out.push({\n      json: { itemId: res.item_id, upload: true, key: a.key, url: s.url, h: s.headers },\n      binary: { file: src.binary[a.prop] }\n    });\n  }\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "646ef8f0-26ae-714e-b90a-5d7b06e96680",
+      "name": "Plan uploads"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d3ed458d-c59e-e416-78e7-0fbdcf89b889",
+              "leftValue": "={{ $json.upload }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "7035b427-a23a-fc22-f16d-102c4873ced0",
+      "name": "Upload?"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "={{ $json.h['authorization'] }}"
+            },
+            {
+              "name": "x-amz-date",
+              "value": "={{ $json.h['x-amz-date'] }}"
+            },
+            {
+              "name": "x-amz-content-sha256",
+              "value": "={{ $json.h['x-amz-content-sha256'] }}"
+            },
+            {
+              "name": "x-amz-server-side-encryption",
+              "value": "={{ $json.h['x-amz-server-side-encryption'] }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "file"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -100
+      ],
+      "id": "e1eaf6c0-96ed-9b17-2309-7c9ed63f3ce9",
+      "name": "Upload to S3",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// E01 · One per message — after the uploads, one item per message to hand to E02.\nconst seen = new Set();\nconst out = [];\nfor (const i of $input.all()) {\n  const id = i.json.itemId ?? $('Plan uploads').all()[i.pairedItem?.item ?? 0]?.json.itemId;\n  if (id && !seen.has(String(id))) { seen.add(String(id)); out.push({ json: { itemId: String(id) } }); }\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "71f0eb90-3919-2ec7-dfe1-1de740fb3882",
+      "name": "One per message"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT pg_notify('inbox_process', $1::text) AS sent;",
+        "options": {
+          "queryReplacement": "={{ [$json.itemId] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1540,
+        0
+      ],
+      "id": "b88a84e6-6ca0-ed75-877e-fc3b91b638df",
+      "name": "Hand to E02",
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres – Inbox (inbox_app)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "New email": {
+      "main": [
+        [
+          {
+            "node": "Parse email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse email": {
+      "main": [
+        [
+          {
+            "node": "Receive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive": {
+      "main": [
+        [
+          {
+            "node": "Plan uploads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan uploads": {
+      "main": [
+        [
+          {
+            "node": "Upload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload?": {
+      "main": [
+        [
+          {
+            "node": "Upload to S3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "One per message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to S3": {
+      "main": [
+        [
+          {
+            "node": "One per message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One per message": {
+      "main": [
+        [
+          {
+            "node": "Hand to E02",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all"
+  },
+  "tags": []
+}
