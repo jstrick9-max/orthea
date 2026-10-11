@@ -1,6 +1,6 @@
 # Consult — shared look (2026-10-10)
 
-One stylesheet, `orthea-consult.css`, hosted next to the logos and pulled into every screen's embed.
+One stylesheet, `orthea-consult.css`, pasted (as `orthea-consult-embed.html`) at the top of every screen's embed.
 It sets: fonts, cream page, one page edge, serif page titles, card-header style, field style,
 buttons (primary clay / secondary white / quiet link / disabled), amber warning boxes, the
 Dolphin tag, the nav hairline, the green user avatar, and hides the Budibase footer.
@@ -11,16 +11,13 @@ each of its buttons by name.
 
 ## Steps
 
-1. **Upload** `orthea-consult.css` to the `orthea-assets` S3 bucket (same place as the logos,
-   public read like them). Check
-   https://orthea-assets.s3.us-east-2.amazonaws.com/orthea-consult.css opens as text.
-2. **Each screen's embed** — Patients, Archive, Intake, Add patient, Review (**New Embed**): paste
-   this as the very first line:
-   ```html
-   <style>@import url('https://orthea-assets.s3.us-east-2.amazonaws.com/orthea-consult.css?v=1');</style>
-   ```
-   When the file changes later: upload it again and change `?v=1` to `?v=2` in the five embeds
-   (otherwise browsers keep the old copy for a while).
+1. **Each screen's embed** — Patients, Archive, Intake, Add patient, Review (**New Embed**): paste
+   all of `orthea-consult-embed.html` at the very top, above what's there. (A link to a hosted
+   file doesn't work: Budibase's Content-Security-Policy blocks stylesheets from S3.)
+   Delete the old line `<style>@import url('https://orthea-assets…/orthea-consult.css?v=1');</style>`
+   if you added it.
+2. When the shared look changes later, replace the block between `ORTHEA SHARED SHELL` and
+   `END ORTHEA SHARED SHELL` in all five embeds.
 3. **Intake → Referrer Picker → Placeholder**: `Choose a referring dentist`.
 4. **Data → `C · Patients for practice`**: replace the SQL with this folder's file, Save.
    Flags now show only while a consult is in review ("1 flag" / "3 flags"); an approved consult

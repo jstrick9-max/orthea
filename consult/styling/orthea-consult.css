@@ -1,6 +1,8 @@
 /* =====================================================================================
-   Orthea Consult — shared shell (every screen links to this file)
-   Hosted at https://orthea-assets.s3.us-east-2.amazonaws.com/orthea-consult.css
+   Orthea Consult — shared shell. Paste orthea-consult-embed.html (this file wrapped in
+   <style>) at the TOP of every screen's embed. It can't be linked from S3: Budibase's
+   Content-Security-Policy only allows stylesheets from itself, Google Fonts, jsDelivr,
+   rsms.me and Bootstrap CDN.
    Each screen's own embed keeps only that screen's layout rules.
    Rules here use doubled [data-name] selectors on purpose: they must beat the
    per-screen embeds, which load after this file.
