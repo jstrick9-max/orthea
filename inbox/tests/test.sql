@@ -16,7 +16,7 @@ INSERT INTO consult.patients (practice_id, first_name, last_name, dob) VALUES
   ('11111111-1111-1111-1111-111111111111','Ava','Reyes','2016-01-01'),
   ('22222222-2222-2222-2222-222222222222','Leo','Marsh','2013-08-27');
 
-SET ROLE consult_app;
+SET ROLE inbox_app;
 
 -- receive
 SELECT (status = 'processing' AND approved AND NOT duplicate) AS ok
@@ -46,7 +46,7 @@ RESET ROLE;
 SELECT (p.practice_id = '11111111-1111-1111-1111-111111111111' AND i.status = 'new' AND i.chart_note = 'Note') AS ok
   FROM inbox.items i JOIN consult.patients p ON p.id = i.patient_id WHERE i.id = :m1 \gset
 \if :ok \echo ok  matched within LSO, status new, note stored \else \echo FAIL stored \quit \endif
-SET ROLE consult_app;
+SET ROLE inbox_app;
 SELECT count(*) = 0 AS ok FROM inbox.complete(:m1, 'x', 'x', 'x', 'Owen', 'Hale', '', '') \gset
 \if :ok \echo ok  a finished item is not reprocessed \else \echo FAIL rerun \quit \endif
 
@@ -60,7 +60,7 @@ INSERT INTO inbox.items (practice_id, message_id, to_address, from_email, status
   ('11111111-1111-1111-1111-111111111111','<a2>','lso.inbox@ortheasecurity.com','drl@lso.com','processing'),
   ('11111111-1111-1111-1111-111111111111','<a3>','lso.inbox@ortheasecurity.com','drl@lso.com','processing'),
   ('11111111-1111-1111-1111-111111111111','<a4>','lso.inbox@ortheasecurity.com','drl@lso.com','processing');
-SET ROLE consult_app;
+SET ROLE inbox_app;
 SELECT (match = 'none' AND patient_id IS NULL) AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<a1>'), 't','s','n','Ava','Reyes','','') \gset
 \if :ok \echo ok  two patients with that name and no birthday → left for staff to pick \else \echo FAIL ambiguous \quit \endif
 SELECT (match = 'name_dob') AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<a2>'), 't','s','n','Ava','Reyes','2016-01-01','') \gset
@@ -72,13 +72,15 @@ SELECT (status = 'error') AS ok FROM inbox.complete((SELECT id FROM inbox.items 
 SELECT count(*) = 0 AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<m2@x>'), 't','s','n','Leo','Marsh','','') \gset
 \if :ok \echo ok  a held message (unknown sender) is never processed \else \echo FAIL held processed \quit \endif
 
--- what n8n / Budibase may not do
+-- what the Inbox app may not do
 \set ON_ERROR_STOP 0
 DELETE FROM inbox.items;
 INSERT INTO inbox.senders VALUES ('11111111-1111-1111-1111-111111111111','evil@x.com','x');
 UPDATE inbox.items SET transcript = 'changed';
+SELECT count(*) FROM consult.consults;
+SELECT parent1_first_name FROM consult.patients;
 \set ON_ERROR_STOP 1
-\echo ok  (the three "permission denied" errors above are expected)
+\echo ok  (the five "permission denied" errors above are expected: no Consult data beyond patient names)
 RESET ROLE;
 SELECT count(*) = 0 AS ok FROM inbox.senders WHERE email = 'evil@x.com' \gset
 \if :ok \echo ok  app role cannot add approved senders \else \echo FAIL senders writable \quit \endif

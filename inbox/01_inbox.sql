@@ -1,13 +1,17 @@
--- Orthea Inbox — database (demo build).
--- Run ONCE in Beekeeper on the admin connection, Auto Commit. Safe to re-run.
+-- Orthea Inbox — database (demo build). Run 00_inbox_role.sql first.
+-- Run in Beekeeper on the admin connection, Auto Commit. Safe to re-run.
 -- Check the editor ends with the line  -- END OF 01_inbox.sql  before Run All.
 --
 -- Doctors forward a voice note / photo / text to their practice's inbox address
 -- (LSO: lso.inbox@ortheasecurity.com). n8n reads the mailbox and calls
 --   inbox.receive(...)   store the message (once), decide practice + approved sender
 --   inbox.complete(...)  add transcript, summary, chart note, and match the patient
--- Staff then review it in Budibase and copy the chart note into the practice's chart.
+-- Staff then review it in the Orthea Inbox app (Budibase) and copy the chart note into the chart.
 -- Orthea never writes to Dolphin.
+--
+-- Inbox is its own product: its own schema, its own database user (inbox_app) for its Budibase
+-- app and n8n workflows. It reads the practice's patient list (consult.patients, a few columns,
+-- read-only) to match patients, and nothing else of Consult or Voice.
 
 CREATE SCHEMA IF NOT EXISTS inbox;
 
@@ -205,14 +209,18 @@ END;
 $$;
 
 -- ---------------------------------------------------------------- access
--- n8n (consult_app) only calls the two functions; Budibase (consult_app) reads and updates items.
+-- inbox_app (n8n + the Inbox Budibase app): call the two functions, read/file items, read the
+-- practice's patient names for the picker. No access to consults, letters or Voice data.
 REVOKE ALL ON FUNCTION inbox.receive(text, text, text, text, text, text, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION inbox.complete(bigint, text, text, text, text, text, text, text) FROM PUBLIC;
-GRANT USAGE ON SCHEMA inbox TO consult_app;
-GRANT EXECUTE ON FUNCTION inbox.receive(text, text, text, text, text, text, jsonb) TO consult_app;
-GRANT EXECUTE ON FUNCTION inbox.complete(bigint, text, text, text, text, text, text, text) TO consult_app;
-GRANT SELECT ON inbox.items, inbox.senders, inbox.addresses TO consult_app;
-GRANT UPDATE (status, patient_id, match, chart_note, filed_by, filed_at, updated_at) ON inbox.items TO consult_app;
+GRANT USAGE ON SCHEMA inbox TO inbox_app;
+GRANT EXECUTE ON FUNCTION inbox.receive(text, text, text, text, text, text, jsonb) TO inbox_app;
+GRANT EXECUTE ON FUNCTION inbox.complete(bigint, text, text, text, text, text, text, text) TO inbox_app;
+GRANT SELECT ON inbox.items, inbox.senders, inbox.addresses TO inbox_app;
+GRANT UPDATE (status, patient_id, match, chart_note, filed_by, filed_at, updated_at) ON inbox.items TO inbox_app;
+GRANT USAGE ON SCHEMA consult TO inbox_app;
+GRANT SELECT (id, practice_id, first_name, last_name, dob, dolphin_patient_id, archived_at) ON consult.patients TO inbox_app;
+GRANT SELECT (email, practice_id, role, active) ON public.practice_users TO inbox_app;
 
 -- Check: the new objects
 SELECT 'inbox tables' AS what, count(*) AS n FROM information_schema.tables WHERE table_schema = 'inbox'
