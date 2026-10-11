@@ -1,0 +1,92 @@
+/* ===== Orthea Inbox screens (after the shared shell) ===== */
+[data-name="Inbox Container"][data-name], [data-name="Item Container"][data-name] {
+  margin: 28px 0 40px !important; padding: 0 32px !important; box-sizing: border-box !important;
+  width: 100% !important; max-width: 1280px !important; display: flex !important; flex-direction: column !important; gap: 16px !important;
+}
+[data-name="Inbox Title"][data-name][data-name][data-name] *, [data-name="Item Title"][data-name][data-name][data-name] p {
+  font-family: var(--o-serif) !important; font-size: 28px !important; font-weight: 500 !important;
+  line-height: 1.2 !important; color: var(--o-ink) !important; margin: 0 !important;
+}
+[data-name="Inbox Header"] > div, [data-name="Item Header"] > div {
+  display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
+  align-items: center !important; justify-content: space-between !important; gap: 14px !important;
+}
+[data-name="Inbox Tabs"] > div { display: flex !important; flex-direction: row !important; gap: 6px !important; }
+
+/* Buttons on Inbox screens: same three styles as Consult */
+:is([data-name="Inbox Container"], [data-name="Item Container"]) .spectrum-Button.spectrum-Button--cta {
+  background: var(--o-clay) !important; border: 1px solid var(--o-clay) !important; border-radius: 10px !important;
+  min-height: 36px !important; padding: 8px 18px !important; box-shadow: none !important;
+}
+:is([data-name="Inbox Container"], [data-name="Item Container"]) .spectrum-Button.spectrum-Button--cta .spectrum-Button-label {
+  color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; font-size: 14px !important; font-weight: 600 !important;
+}
+:is([data-name="Inbox Container"], [data-name="Item Container"]) .spectrum-Button.spectrum-Button--secondary {
+  background: var(--o-paper) !important; border: 1px solid var(--o-line-2) !important; border-radius: 10px !important;
+  min-height: 36px !important; padding: 8px 16px !important; box-shadow: none !important;
+}
+:is([data-name="Inbox Container"], [data-name="Item Container"]) .spectrum-Button.spectrum-Button--secondary .spectrum-Button-label {
+  color: var(--o-ink) !important; -webkit-text-fill-color: var(--o-ink) !important; font-size: 13px !important; font-weight: 500 !important;
+}
+:is([data-name="Inbox Container"], [data-name="Item Container"]) .spectrum-Button:disabled {
+  background: #EDE7DF !important; border-color: #E1D8CC !important; cursor: not-allowed !important;
+}
+:is([data-name="Inbox Container"], [data-name="Item Container"]) .spectrum-Button:disabled .spectrum-Button-label {
+  color: var(--o-ink-3) !important; -webkit-text-fill-color: var(--o-ink-3) !important;
+}
+
+/* Inbox list */
+[data-name="Inbox Card"] > div {
+  background: var(--o-paper) !important; border: 1px solid var(--o-pale) !important; border-radius: 10px !important;
+  overflow: hidden !important; padding: 0 !important; gap: 0 !important;
+}
+[data-name="Inbox Repeater"] > div { gap: 0 !important; }
+[data-name="Inbox Row"] > div {
+  display: grid !important; grid-template-columns: 130px 180px 200px minmax(0, 1fr) 120px !important;
+  align-items: center !important; gap: 16px !important; padding: 14px 20px !important; min-height: 60px !important;
+  border-bottom: 1px solid #F0EBE4 !important; cursor: pointer !important; box-sizing: border-box !important;
+}
+[data-name="Inbox Row"] > div:hover { background: #FAF7F3 !important; }
+[data-name="Inbox Row"] p { margin: 0 !important; font-size: 14px !important; color: var(--o-ink) !important; }
+[data-name="Row When"] p { font-size: 13px !important; color: var(--o-ink-2) !important; }
+[data-name="Row From"] p { font-weight: 500 !important; }
+[data-name="Row Summary"] p { color: var(--o-ink-2) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+[data-name="Row Status"] > div, [data-name="Item Status"] > div { display: flex !important; justify-content: flex-start !important; }
+[data-name="Row Status"] p, [data-name="Item Status"] p {
+  display: inline-block !important; width: fit-content !important; font-size: 12px !important; font-weight: 500 !important;
+  padding: 3px 10px !important; border-radius: 999px !important; margin: 0 !important;
+  color: var(--pill-fg, #446B63) !important; background: var(--pill-bg, #EDF3F1) !important;
+}
+@media (max-width: 900px) {
+  [data-name="Inbox Row"] > div { grid-template-columns: minmax(0, 1fr) 110px !important; }
+  [data-name="Row When"], [data-name="Row Summary"] { display: none !important; }
+}
+
+/* Message page */
+[data-name="Item Meta"] p { font-size: 14px !important; color: var(--o-ink-2) !important; margin: 0 !important; }
+[data-name="Item Columns"] > div {
+  display: grid !important; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) !important; gap: 16px !important; align-items: start !important;
+}
+@media (max-width: 1000px) { [data-name="Item Columns"] > div { grid-template-columns: minmax(0, 1fr) !important; } }
+[data-name="Note Card"] > div, [data-name="Source Card"] > div {
+  background: var(--o-paper) !important; border: 1px solid var(--o-pale) !important; border-radius: 10px !important;
+  padding: 18px 20px !important; gap: 12px !important; box-sizing: border-box !important;
+}
+[data-name="Source Card"] > div { background: #FAF7F3 !important; border-color: #E4DCD0 !important; }
+[data-name="Note Card Title"] p, [data-name="Source Card Title"] p, [data-name^="Source Label"] p {
+  font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important;
+  color: var(--o-green) !important; margin: 0 !important;
+}
+[data-name^="Source Label"] { margin-top: 6px !important; }
+[data-name^="Source Text"] p { font-size: 14px !important; line-height: 1.55 !important; white-space: pre-wrap !important; color: var(--o-ink) !important; margin: 0 !important; }
+[data-name="Match Note"] p, [data-name="Message Says"] p { font-size: 12px !important; color: var(--o-ink-3) !important; margin: 0 !important; }
+[data-name="Chart Note"] textarea { min-height: 220px !important; font-size: 14px !important; line-height: 1.5 !important; }
+[data-name="Note Actions"] > div, [data-name="Closed Box"] > div, [data-name="Held Box"] > div, [data-name="Error Box"] > div {
+  display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center !important; gap: 8px !important;
+}
+[data-name="Held Box"] > div, [data-name="Error Box"] > div {
+  background: var(--o-warn-bg) !important; border: 1px solid var(--o-warn-line) !important; border-radius: 7px !important; padding: 10px 14px !important;
+}
+[data-name="Held Box"] p, [data-name="Error Box"] p, [data-name="Closed Box"] p { font-size: 13px !important; margin: 0 !important; flex: 1 1 260px !important; }
+[data-name="Held Box"] p, [data-name="Error Box"] p { color: var(--o-warn-ink) !important; }
+[data-name="Closed Box"] p { color: var(--o-ink-2) !important; }
