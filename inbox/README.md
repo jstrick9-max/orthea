@@ -6,11 +6,17 @@ Orthea never writes to Dolphin.
 
 ```
 doctor's phone ─email─▶ lso.inbox@ortheasecurity.com (Spacemail)
-     n8n I01 (IMAP) ─▶ inbox.receive()  → stored once; unknown senders held
+     n8n E01 (IMAP) ─▶ inbox.receive()  → stored once; unknown senders held
                     ─▶ attachments to S3, transcribe, AI: patient + summary + chart note
                     ─▶ inbox.complete() → patient matched (name+DOB, name, last+DOB)
 Budibase  Inbox screen ─▶ check patient, Copy note, Filed / Dismiss
 ```
+
+## Naming
+
+Like Consult's `C · …` queries and `C01 …` workflows, everything of Inbox starts with **E**:
+Budibase queries `E · Inbox list`, `E · File item`, …; n8n workflows `E01 Inbox - Receive`, …
+Database: schema `inbox`, user `inbox_app`.
 
 ## A separate product
 
@@ -19,7 +25,7 @@ Budibase  Inbox screen ─▶ check patient, Copy note, Filed / Dismiss
 | Budibase | its own app **Orthea Inbox** (own screens, nav, URL, roles) | the workspace and user logins |
 | Budibase data source | its own **Inbox DB**, signed in as `inbox_app` | — |
 | Postgres | its own schema `inbox`, own user `inbox_app` | reads `consult.patients` (id, name, DOB, Dolphin ID only) and `public.practice_users` to scope by practice |
-| n8n | its own workflows `I01 …`, own Postgres credential (`inbox_app`) | the n8n instance, S3 and AI credentials |
+| n8n | its own workflows `E01 …`, own Postgres credential (`inbox_app`) | the n8n instance, S3 and AI credentials |
 | Mail | per-practice inbox mailbox (`lso.inbox@`) | — |
 
 `inbox_app` cannot see consults, letters, flags or anything of Voice (tested).
@@ -33,7 +39,7 @@ transcription and AI providers.
 | Step | What | Status |
 |---|---|---|
 | 1 | Database: `00_inbox_role.sql`, `01_inbox.sql`, `02_lso_setup.sql` | built, tested (`tests/run.sh`, 20 checks) |
-| 2 | n8n I01 workflow | next |
+| 2 | n8n E01 workflow | next |
 | 3 | Budibase app **Orthea Inbox** + data source **Inbox DB** | after 2 |
 | 4 | Demo recordings | after 3 |
 
