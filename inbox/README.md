@@ -157,8 +157,8 @@ One link: **Inbox** → `/inbox`, role Basic.
        - `Copy Note` "Copy note" (Secondary): **Copy To Clipboard** `{{ Item Form.Value.chartNote }}`
          (⚡ → Item Form → chartNote), then Show Notification "Copied".
        - `Save Note` "Save" (Secondary): Execute Query `E · Set patient` (`id` `{{ url.id }}`,
-         `email` `{{ [user].[email] }}`, `patientId` = form chartNote's sibling `patientId`) →
-         Execute Query `E · Save note` (`id`, `email`, `chartNote` = form `chartNote`) →
+         `email` `{{ [user].[email] }}`, `patientId` = `{{ Item Form.Value.patientId }}`) →
+         Execute Query `E · Save note` (`id`, `email`, `chartNote` = `{{ Item Form.Value.chartNote }}`) →
          Refresh Data Provider **Item** → Show Notification "Saved". Tick **Do not display default
          notification** on both queries.
        - `File Note` "Mark as filed" (Action): Execute Query `E · Set patient` (as above) →
