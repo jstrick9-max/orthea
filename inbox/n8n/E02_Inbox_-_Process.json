@@ -367,6 +367,10 @@
             {
               "name": "content-type",
               "value": "={{ $json.h['content-type'] }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
             }
           ]
         },

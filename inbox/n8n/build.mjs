@@ -20,7 +20,8 @@ function pg(name, query, replacement, pos, extra = {}) {
 function http(name, method, headers, pos, body, extra = {}) {
   const p = {
     method, url: '={{ $json.url }}', sendHeaders: true,
-    headerParameters: { parameters: headers.map(h => ({ name: h, value: `={{ $json.h['${h}'] }}` })) },
+    headerParameters: { parameters: headers.map(h => ({ name: h, value: `={{ $json.h['${h}'] }}` }))
+      .concat((extra.accept ? [{ name: 'Accept', value: extra.accept }] : [])) },
     options: { timeout: 60000, ...(extra.options || {}) }
   };
   Object.assign(p, body || {});
@@ -97,7 +98,7 @@ const e02 = {
     code('No voice note', 'e02_no_transcript.js', [880, 200], { sig: false }),
     code('Sign Claude', 'e02_sign_claude.js', [2860, 0]),
     http('Ask Claude', 'POST', ['authorization', 'x-amz-date', 'content-type'], [3080, 0],
-         { sendBody: true, specifyBody: 'json', jsonBody: '={{ $json.body }}' }, { node: ERR }),
+         { sendBody: true, specifyBody: 'json', jsonBody: '={{ $json.body }}' }, { node: ERR, accept: 'application/json' }),
     code('Read answer', 'e02_read_answer.js', [3300, 0], { sig: false, extra: ERR }),
     pg('Save', 'SELECT * FROM inbox.complete($1::bigint, $2, $3, $4, $5, $6, $7, NULL);',
        '={{ [$json.itemId, $json.transcript, $json.summary, $json.chartNote, $json.first, $json.last, $json.dob] }}', [3520, 0]),
