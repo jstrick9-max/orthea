@@ -106,3 +106,8 @@
   [data-name="Inbox Columns"] > div { grid-template-columns: minmax(0, 1fr) 110px !important; }
   [data-name="Col When"], [data-name="Col Summary"], [data-name="Col From"] { display: none !important; }
 }
+[data-name="Patient Row"] > div {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 170px !important;
+  column-gap: 12px !important; align-items: end !important;
+}
+@media (max-width: 700px) { [data-name="Patient Row"] > div { grid-template-columns: minmax(0, 1fr) !important; } }

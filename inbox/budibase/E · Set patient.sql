@@ -1,17 +1,17 @@
 -- Budibase query "E · Set patient" (Inbox DB, Function: Update).
--- Parameters (Default: blank): id, email, patientId
--- Staff pick (or correct) the patient of a message still to be filed. The patient must be
--- one of the same practice. Picking the patient already matched changes nothing.
--- Returns the message id, or no row if nothing changed.
+-- Parameters (Default: blank): id, email, firstName, lastName, dob
+-- Saves the patient name and date of birth (MM/DD/YYYY) as confirmed by staff, on a message
+-- still to be filed. A blank date of birth clears it. Returns the message id.
 UPDATE inbox.items i
-   SET patient_id = p.id,
-       match      = 'manual',
-       updated_at = now()
-  FROM consult.patients p
+   SET patient_first = NULLIF(regexp_replace(trim({{ firstName }}::text), '\s+', ' ', 'g'), ''),
+       patient_last  = NULLIF(regexp_replace(trim({{ lastName }}::text), '\s+', ' ', 'g'), ''),
+       patient_dob   = CASE WHEN trim({{ dob }}::text) ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$'
+                              THEN to_date(trim({{ dob }}::text), 'MM/DD/YYYY')
+                            WHEN trim({{ dob }}::text) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                              THEN substr(trim({{ dob }}::text), 1, 10)::date
+                       END,
+       updated_at    = now()
  WHERE i.id = CASE WHEN trim({{ id }}::text) ~ '^[0-9]+$' THEN trim({{ id }}::text)::bigint END
-   AND p.id = CASE WHEN trim({{ patientId }}::text) ~ '^[0-9]+$' THEN trim({{ patientId }}::text)::bigint END
-   AND p.practice_id = i.practice_id
-   AND i.patient_id IS DISTINCT FROM p.id
    AND i.status IN ('new', 'error')
    AND i.practice_id IN (SELECT pu.practice_id FROM public.practice_users pu
                           WHERE lower(pu.email) = lower({{ email }}::text) AND pu.active)

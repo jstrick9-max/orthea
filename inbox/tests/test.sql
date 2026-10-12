@@ -36,37 +36,25 @@ SELECT (status = 'processing') AS ok FROM inbox.receive('cc@x.com, lso.inbox@ort
 SELECT (status = 'held') AS ok FROM inbox.receive('bronsky.inbox@ortheasecurity.com', '<m6@x>', 'drl@lso.com', '', '', '', '[]') \gset
 \if :ok \echo ok  LSO sender is not approved for another practice \else \echo FAIL cross-practice \quit \endif
 
--- complete + matching
+-- complete: the patient is kept as the message names them (no lookup)
 SELECT id AS m1 FROM inbox.items WHERE message_id = '<m1@x>' \gset
-SELECT (match = 'name_dob' AND patient_id IS NOT NULL) AS ok
-  FROM inbox.complete(:m1, 'Transcript', 'Summary', 'Note', ' leo ', 'MARSH', '08/27/2013', '') \gset
-\if :ok \echo ok  name + birthday match (case/space-insensitive), own practice only \else \echo FAIL name_dob \quit \endif
-SELECT (p.practice_id = '11111111-1111-1111-1111-111111111111') AS ok FROM inbox.items i JOIN consult.patients p ON p.id = i.patient_id WHERE i.id = :m1 \gset
+SELECT (status = 'new') AS ok FROM inbox.complete(:m1, 'Transcript', 'Summary', 'Note', ' leo ', 'MARSH', '08/27/2013', '') \gset
+\if :ok \echo ok  complete → new \else \echo FAIL complete \quit \endif
 RESET ROLE;
-SELECT (p.practice_id = '11111111-1111-1111-1111-111111111111' AND i.status = 'new' AND i.chart_note = 'Note') AS ok
-  FROM inbox.items i JOIN consult.patients p ON p.id = i.patient_id WHERE i.id = :m1 \gset
-\if :ok \echo ok  matched within LSO, status new, note stored \else \echo FAIL stored \quit \endif
+SELECT (patient_first = 'leo' AND patient_last = 'MARSH' AND patient_dob = '2013-08-27' AND said_first = 'leo'
+        AND patient_id IS NULL AND chart_note = 'Note') AS ok FROM inbox.items WHERE id = :m1 \gset
+\if :ok \echo ok  name and birthday stored as the message gives them; no patient link \else \echo FAIL stored \quit \endif
 SET ROLE inbox_app;
 SELECT count(*) = 0 AS ok FROM inbox.complete(:m1, 'x', 'x', 'x', 'Owen', 'Hale', '', '') \gset
 \if :ok \echo ok  a finished item is not reprocessed \else \echo FAIL rerun \quit \endif
-
 SELECT id AS m5 FROM inbox.items WHERE message_id = '<m5@x>' \gset
-SELECT (match = 'name') AS ok FROM inbox.complete(:m5, 't', 's', 'n', 'Owen', 'Hale', '', '') \gset
-\if :ok \echo ok  name only, one such patient → matched \else \echo FAIL name \quit \endif
-
+SELECT (status = 'new') AS ok FROM inbox.complete(:m5, 't', 's', 'n', '', '', 'August 2013', '') \gset
 RESET ROLE;
+SELECT (patient_first IS NULL AND patient_dob IS NULL) AS ok FROM inbox.items WHERE id = :m5 \gset
+\if :ok \echo ok  no name / unreadable birthday → left blank for staff \else \echo FAIL blanks \quit \endif
 INSERT INTO inbox.items (practice_id, message_id, to_address, from_email, status) VALUES
-  ('11111111-1111-1111-1111-111111111111','<a1>','lso.inbox@ortheasecurity.com','drl@lso.com','processing'),
-  ('11111111-1111-1111-1111-111111111111','<a2>','lso.inbox@ortheasecurity.com','drl@lso.com','processing'),
-  ('11111111-1111-1111-1111-111111111111','<a3>','lso.inbox@ortheasecurity.com','drl@lso.com','processing'),
   ('11111111-1111-1111-1111-111111111111','<a4>','lso.inbox@ortheasecurity.com','drl@lso.com','processing');
 SET ROLE inbox_app;
-SELECT (match = 'none' AND patient_id IS NULL) AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<a1>'), 't','s','n','Ava','Reyes','','') \gset
-\if :ok \echo ok  two patients with that name and no birthday → left for staff to pick \else \echo FAIL ambiguous \quit \endif
-SELECT (match = 'name_dob') AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<a2>'), 't','s','n','Ava','Reyes','2016-01-01','') \gset
-\if :ok \echo ok  …and the birthday picks the right one \else \echo FAIL ambiguous dob \quit \endif
-SELECT (match = 'last_dob') AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<a3>'), 't','s','n','Leonard','Marsh','2013-08-27','') \gset
-\if :ok \echo ok  nickname/first-name mismatch, last name + birthday → matched \else \echo FAIL last_dob \quit \endif
 SELECT (status = 'error') AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<a4>'), '','','','','','','transcription failed') \gset
 \if :ok \echo ok  an error is recorded, not shown as a note \else \echo FAIL error \quit \endif
 SELECT count(*) = 0 AS ok FROM inbox.complete((SELECT id FROM inbox.items WHERE message_id='<m2@x>'), 't','s','n','Leo','Marsh','','') \gset
@@ -78,9 +66,9 @@ DELETE FROM inbox.items;
 INSERT INTO inbox.senders VALUES ('11111111-1111-1111-1111-111111111111','evil@x.com','x');
 UPDATE inbox.items SET transcript = 'changed';
 SELECT count(*) FROM consult.consults;
-SELECT parent1_first_name FROM consult.patients;
+SELECT id FROM consult.patients;
 \set ON_ERROR_STOP 1
-\echo ok  (the five "permission denied" errors above are expected: no Consult data beyond patient names)
+\echo ok  (the five "permission denied" errors above are expected: Inbox sees nothing of Consult)
 RESET ROLE;
 SELECT count(*) = 0 AS ok FROM inbox.senders WHERE email = 'evil@x.com' \gset
 \if :ok \echo ok  app role cannot add approved senders \else \echo FAIL senders writable \quit \endif

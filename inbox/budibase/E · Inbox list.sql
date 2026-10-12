@@ -10,14 +10,10 @@ SELECT i.id,
        i.status,
        CASE i.status WHEN 'new' THEN 'To file' WHEN 'processing' THEN 'Working'
                      WHEN 'error' THEN 'Needs a look' ELSE initcap(i.status) END        AS status_label,
-       i.match,
-       CASE WHEN p.id IS NOT NULL THEN p.first_name || ' ' || p.last_name
-            WHEN COALESCE(i.said_first, i.said_last) IS NOT NULL
-              THEN trim(COALESCE(i.said_first, '') || ' ' || COALESCE(i.said_last, '')) || ' (not matched)'
-            ELSE 'No patient named' END                                                AS patient_label,
+       COALESCE(NULLIF(trim(COALESCE(i.patient_first, '') || ' ' || COALESCE(i.patient_last, '')), ''),
+                'No patient named')                                                    AS patient_label,
        jsonb_array_length(i.attachments)                                               AS attachment_count
 FROM inbox.items i
-LEFT JOIN consult.patients p ON p.id = i.patient_id
 LEFT JOIN inbox.senders s ON s.practice_id = i.practice_id AND s.email = i.from_email
 WHERE i.practice_id IN (SELECT pu.practice_id FROM public.practice_users pu
                          WHERE lower(pu.email) = lower({{ email }}::text) AND pu.active)

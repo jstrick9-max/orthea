@@ -10,4 +10,6 @@ su postgres -c "$P -U postgres -d ib -f '$D/../../consult/dolphin-launch/tests/s
 su postgres -c "$P -U postgres -d ib -c 'GRANT CREATE ON DATABASE ib TO orthea_admin' -c 'CREATE ROLE inbox_app LOGIN'"
 su postgres -c "$P -U orthea_admin -d ib -f '$D/../01_inbox.sql'" >/dev/null
 su postgres -c "$P -U orthea_admin -d ib -f '$D/../01_inbox.sql'" >/dev/null 2>&1   # re-run is safe
+su postgres -c "$P -U orthea_admin -d ib -f '$D/../04_island.sql'" >/dev/null
+su postgres -c "$P -U orthea_admin -d ib -f '$D/../04_island.sql'" >/dev/null 2>&1   # re-run is safe
 su postgres -c "$B/psql -X -h /tmp/pgt -p 5499 -U postgres -d ib -f '$D/test.sql'"
