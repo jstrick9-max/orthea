@@ -90,5 +90,5 @@
 [data-name="Held Box"] p, [data-name="Error Box"] p, [data-name="Closed Box"] p { font-size: 13px !important; margin: 0 !important; flex: 1 1 260px !important; }
 [data-name="Held Box"] p, [data-name="Error Box"] p { color: var(--o-warn-ink) !important; }
 [data-name="Closed Box"] p { color: var(--o-ink-2) !important; }
-[data-name="Note Actions"] { margin-top: 14px !important; }
-[data-name="Closed Box"], [data-name="Held Box"], [data-name="Error Box"] { margin-top: 14px !important; }
+[data-name="Note Actions"] > div { margin-top: 16px !important; }
+[data-name="Closed Box"] > div, [data-name="Held Box"] > div, [data-name="Error Box"] > div { margin-top: 16px !important; }
