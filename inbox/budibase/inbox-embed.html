@@ -282,4 +282,14 @@ body, .main-wrapper, .main-content-area { background-color: var(--o-cream) !impo
 [data-name="Closed Box"] p { color: var(--o-ink-2) !important; }
 [data-name="Note Actions"] > div { margin-top: 16px !important; }
 [data-name="Closed Box"] > div, [data-name="Held Box"] > div, [data-name="Error Box"] > div { margin-top: 16px !important; }
+[data-name="Inbox Columns"] > div {
+  display: grid !important; grid-template-columns: 130px 180px 200px minmax(0, 1fr) 120px !important;
+  align-items: center !important; gap: 16px !important; padding: 0 20px !important; min-height: 44px !important;
+  background: #DCE7E4 !important; box-sizing: border-box !important;
+}
+[data-name="Inbox Columns"] p { font-size: 13px !important; font-weight: 600 !important; letter-spacing: 0.02em !important; color: #2F4A43 !important; margin: 0 !important; }
+@media (max-width: 900px) {
+  [data-name="Inbox Columns"] > div { grid-template-columns: minmax(0, 1fr) 110px !important; }
+  [data-name="Col When"], [data-name="Col Summary"], [data-name="Col From"] { display: none !important; }
+}
 </style>
